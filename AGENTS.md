@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan at
-`specs/007-cron-job-management/plan.md`.
+`specs/008-project-documentation/plan.md`.
 <!-- SPECKIT END -->
 
 ## Git
