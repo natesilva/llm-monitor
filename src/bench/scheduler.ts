@@ -5,12 +5,14 @@ import { runEndpoint } from "./runner";
 export async function runAllEndpoints(
   db: Database,
   endpoints: ResolvedEndpoint[],
+  debug: boolean,
+  prompt?: string,
 ): Promise<void> {
   console.log(`Benchmark run starting — ${endpoints.length} endpoint(s)`);
 
   for (const endpoint of endpoints) {
     try {
-      await runEndpoint(db, endpoint);
+      await runEndpoint(db, endpoint, debug, prompt);
     } catch (err) {
       console.error(
         `[${endpoint.label}] Unexpected error: ${err instanceof Error ? err.message : err}`,

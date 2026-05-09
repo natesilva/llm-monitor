@@ -6,13 +6,13 @@ const config: AppConfig = {
     endpoints: [
       {
         label: "OpenAI GPT-4o",
-        baseUrl: "https://api.openai.com",
+        baseUrl: "https://api.openai.com/v1",
         apiKeyEnvVar: "OPENAI_API_KEY",
         model: "gpt-4o",
       },
       {
         label: "OpenAI GPT-4o-mini",
-        baseUrl: "https://api.openai.com",
+        baseUrl: "https://api.openai.com/v1",
         apiKeyEnvVar: "OPENAI_API_KEY",
         model: "gpt-4o-mini",
       },

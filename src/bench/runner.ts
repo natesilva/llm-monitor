@@ -1,20 +1,32 @@
+import { insertRun } from "../db/queries";
 import type { Database } from "../db/schema";
 import type { ResolvedEndpoint } from "../shared/types";
-import { insertRun } from "../db/queries";
 
 export async function runEndpoint(
   db: Database,
   endpoint: ResolvedEndpoint,
+  debug: boolean,
+  prompt?: string,
 ): Promise<void> {
   const label = endpoint.label;
   console.log(`[${label}] Running benchmark...`);
 
+  const userId =
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
   const body = {
     model: endpoint.model,
-    messages: [{ role: "user", content: endpoint.promptTemplate }],
+    messages: [{ role: "user", content: prompt ?? endpoint.promptTemplate }],
     temperature: endpoint.temperature,
     max_tokens: endpoint.maxTokens,
+    user: userId,
   };
+
+  if (debug) {
+    console.log(`[${label}] Request: ${JSON.stringify(body)}`);
+  }
 
   const start = performance.now();
   let httpStatus = 0;
@@ -28,7 +40,7 @@ export async function runEndpoint(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), endpoint.timeoutMs);
 
-    const res = await fetch(`${endpoint.baseUrl}/v1/chat/completions`, {
+    const res = await fetch(`${endpoint.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -41,17 +53,33 @@ export async function runEndpoint(
     clearTimeout(timeout);
     httpStatus = res.status;
 
-    const json = await res.json();
+    const text = await res.text();
 
-    if (res.ok) {
-      model = json.model ?? endpoint.model;
-      promptTokens = json.usage?.prompt_tokens ?? 0;
-      completionTokens = json.usage?.completion_tokens ?? 0;
-      totalTokens = json.usage?.total_tokens ?? 0;
-    } else {
+    if (debug) {
+      const truncated = text.length > 1000 ? `${text.slice(0, 1000)}...` : text;
+      console.log(`[${label}] Response: ${truncated}`);
+    }
+
+    let json: unknown;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      errorMessage = `HTTP ${res.status}: non-JSON response (${text.slice(0, 200)})`;
+      json = null;
+    }
+
+    if (res.ok && json) {
+      const data = json as Record<string, unknown>;
+      model = (data.model as string) ?? endpoint.model;
+      promptTokens = (data.usage as Record<string, number>)?.prompt_tokens ?? 0;
+      completionTokens =
+        (data.usage as Record<string, number>)?.completion_tokens ?? 0;
+      totalTokens = (data.usage as Record<string, number>)?.total_tokens ?? 0;
+    } else if (!errorMessage) {
+      const data = json as Record<string, unknown> | null;
       errorMessage =
-        json.error?.message ??
-        `HTTP ${res.status}: ${JSON.stringify(json).slice(0, 200)}`;
+        (data as Record<string, Record<string, string>>)?.error?.message ??
+        `HTTP ${res.status}: ${text.slice(0, 200)}`;
     }
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
