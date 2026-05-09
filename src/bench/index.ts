@@ -5,31 +5,7 @@ import { loadConfig } from "../shared/config";
 import { loadEndpoints } from "./config";
 import { runAllEndpoints } from "./scheduler";
 
-async function main() {
-  const { values } = parseArgs({
-    args: Bun.argv,
-    options: {
-      debug: { type: "boolean" },
-      help: { type: "boolean" },
-      prompt: { type: "string" },
-    },
-    strict: true,
-    allowPositionals: true,
-  });
-
-  if (values.help) {
-    console.log(`Usage: bun run bench [options]
-
-Options:
-  --debug          Print full request and response details for each endpoint
-  --prompt <text>  Specify the prompt text sent to each endpoint
-  --help           Show this help message`);
-    process.exit(0);
-  }
-
-  const debug = values.debug ?? false;
-  const prompt: string | undefined = values.prompt;
-
+export async function runBench(debug = false, prompt?: string) {
   let rawConfig: { default: import("../shared/types").AppConfig };
   try {
     // @ts-expect-error - config.ts is created by the user from config.example.ts
@@ -52,6 +28,31 @@ Options:
   }
 
   db.close();
+}
+
+async function main() {
+  const { values } = parseArgs({
+    args: Bun.argv,
+    options: {
+      debug: { type: "boolean" },
+      help: { type: "boolean" },
+      prompt: { type: "string" },
+    },
+    strict: true,
+    allowPositionals: true,
+  });
+
+  if (values.help) {
+    console.log(`Usage: bun run bench [options]
+
+Options:
+  --debug          Print full request and response details for each endpoint
+  --prompt <text>  Specify the prompt text sent to each endpoint
+  --help           Show this help message`);
+    process.exit(0);
+  }
+
+  await runBench(values.debug ?? false, values.prompt);
 }
 
 main().catch((err) => {
