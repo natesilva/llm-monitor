@@ -1,13 +1,16 @@
 import Database from "bun:sqlite";
 import { mkdirSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 
 export function initDb(dbPath: string): Database {
-  const dir = join(dbPath, "..");
+  const resolved = isAbsolute(dbPath)
+    ? dbPath
+    : resolve(import.meta.dir, "../..", dbPath);
+  const dir = join(resolved, "..");
   mkdirSync(dir, { recursive: true });
 
-  const db = new Database(dbPath);
-  db.exec("PRAGMA journal_mode = WAL;");
+  const db = new Database(resolved);
+  db.run("PRAGMA journal_mode = WAL;");
 
   const migrationsDir = join(import.meta.dir, "migrations");
   const files = readdirSync(migrationsDir)
@@ -16,7 +19,7 @@ export function initDb(dbPath: string): Database {
 
   for (const file of files) {
     const sql = readFileSync(join(migrationsDir, file), "utf-8");
-    db.exec(sql);
+    db.run(sql);
   }
 
   return db;
