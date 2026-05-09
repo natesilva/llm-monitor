@@ -1,55 +1,175 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LLM Monitor</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f1117; color: #e0e0e0; padding: 24px; }
-    h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 8px; color: #fff; }
-    .subtitle { font-size: 0.85rem; color: #888; margin-bottom: 24px; }
-    .section-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: #ccc; }
-    #comparison-section { margin-bottom: 32px; }
-    #comparison-container { background: #1a1d27; border-radius: 12px; padding: 20px; margin-bottom: 12px; }
-    #comparison-empty { text-align: center; color: #666; padding: 40px; font-size: 0.9rem; }
-    #toggles { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-    .toggle-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid #333; background: transparent; color: #aaa; cursor: pointer; font-size: 0.8rem; transition: all 0.15s; }
-    .toggle-btn.active { border-color: var(--cfg-color, #6366f1); color: #fff; background: color-mix(in srgb, var(--cfg-color, #6366f1) 20%, transparent); }
-    .toggle-btn:hover { border-color: #555; }
-    #tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px; }
-    .tile { background: #1a1d27; border-radius: 12px; padding: 20px; }
-    .tile-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .tile-label { font-size: 1rem; font-weight: 600; color: #fff; }
-    .tile-model { font-size: 0.75rem; color: #666; }
-    .tile-canvas-wrap { position: relative; height: 180px; margin-bottom: 12px; }
-    .tile-canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
-    .tile-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .stat { text-align: center; }
-    .stat-value { font-size: 1.1rem; font-weight: 600; color: #fff; }
-    .stat-label { font-size: 0.65rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
-    .empty-tile { text-align: center; color: #555; padding: 60px 20px; font-size: 0.9rem; }
-  </style>
-</head>
-<body>
-  <h1>LLM Performance Monitor</h1>
-  <p class="subtitle" id="last-refresh">Loading...</p>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>LLM Monitor</title>
+        <style>
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    sans-serif;
+                background: #0f1117;
+                color: #e0e0e0;
+                padding: 24px;
+            }
+            h1 {
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin-bottom: 8px;
+                color: #fff;
+            }
+            .subtitle {
+                font-size: 0.85rem;
+                color: #888;
+                margin-bottom: 24px;
+            }
+            .section-title {
+                font-size: 1.1rem;
+                font-weight: 600;
+                margin-bottom: 16px;
+                color: #ccc;
+            }
+            #comparison-section {
+                margin-bottom: 32px;
+            }
+            #comparison-container {
+                background: #1a1d27;
+                border-radius: 12px;
+                padding: 20px;
+                margin-bottom: 12px;
+            }
+            #comparison-chart {
+                height: 250px !important;
+            }
+            #comparison-empty {
+                text-align: center;
+                color: #666;
+                padding: 40px;
+                font-size: 0.9rem;
+            }
+            #toggles {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-bottom: 24px;
+            }
+            .toggle-btn {
+                padding: 6px 14px;
+                border-radius: 20px;
+                border: 1px solid #333;
+                background: transparent;
+                color: #aaa;
+                cursor: pointer;
+                font-size: 0.8rem;
+                transition: all 0.15s;
+            }
+            .toggle-btn.active {
+                border-color: var(--cfg-color, #6366f1);
+                color: #fff;
+                background: color-mix(
+                    in srgb,
+                    var(--cfg-color, #6366f1) 20%,
+                    transparent
+                );
+            }
+            .toggle-btn:hover {
+                border-color: #555;
+            }
+            #tiles {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+                gap: 16px;
+            }
+            .tile {
+                background: #1a1d27;
+                border-radius: 12px;
+                padding: 20px;
+            }
+            .tile-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+            }
+            .tile-label {
+                font-size: 1rem;
+                font-weight: 600;
+                color: #fff;
+            }
+            .tile-model {
+                font-size: 0.75rem;
+                color: #666;
+            }
+            .tile-canvas-wrap {
+                position: relative;
+                height: 180px;
+                margin-bottom: 12px;
+            }
+            .tile-canvas {
+                position: absolute;
+                inset: 0;
+                width: 100% !important;
+                height: 100% !important;
+            }
+            .tile-stats {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+            .stat {
+                text-align: center;
+            }
+            .stat-value {
+                font-size: 1.1rem;
+                font-weight: 600;
+                color: #fff;
+            }
+            .stat-label {
+                font-size: 0.65rem;
+                color: #666;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-top: 2px;
+            }
+            .empty-tile {
+                text-align: center;
+                color: #555;
+                padding: 60px 20px;
+                font-size: 0.9rem;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>LLM Performance Monitor</h1>
+        <p class="subtitle" id="last-refresh">Loading...</p>
 
-  <section id="comparison-section">
-    <h2 class="section-title">Comparison (24h)</h2>
-    <div id="toggles"></div>
-    <div id="comparison-container">
-      <canvas id="comparison-chart"></canvas>
-      <div id="comparison-empty" style="display:none;">Select configurations to compare</div>
-    </div>
-  </section>
+        <section id="comparison-section">
+            <h2 class="section-title">Comparison (24h)</h2>
+            <div id="toggles"></div>
+            <div id="comparison-container">
+                <canvas id="comparison-chart"></canvas>
+                <div id="comparison-empty" style="display: none">
+                    Select configurations to compare
+                </div>
+            </div>
+        </section>
 
-  <section>
-    <h2 class="section-title">Per-Configuration (48h)</h2>
-    <div id="tiles"></div>
-  </section>
+        <section>
+            <h2 class="section-title">Per-Configuration (48h)</h2>
+            <div id="tiles"></div>
+        </section>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-  <script src="app.js"></script>
-</body>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+        <script src="https://cdn.jsdelivr.net/npm/date-fns@3"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+        <script src="app.js"></script>
+    </body>
 </html>
