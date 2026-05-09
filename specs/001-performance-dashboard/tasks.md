@@ -24,10 +24,10 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Initialize Bun project with `package.json` (type: module, ESM), `tsconfig.json` (strict, esnext module), and `.gitignore` (data/, node_modules/, .env) at project root
-- [ ] T002 [P] Create project directory structure per plan.md: `src/bench/`, `src/web/`, `src/db/`, `src/db/migrations/`, `src/shared/`, `tests/bench/`, `tests/web/`, `tests/db/`, `tests/integration/`, `data/`
-- [ ] T003 [P] Install Chart.js as the sole external dependency via `bun add chart.js`, and TypeScript as dev dependency via `bun add -d typescript`
-- [ ] T004 [P] Create `config.example.ts` at project root exporting a sample `AppConfig` with 2 example endpoints, web port 3000, db path `./data/llm-monitor.db`, 30-day retention, and cron schedule `"0 * * * *"`
+- [x] T001 Initialize Bun project with `package.json` (type: module, ESM), `tsconfig.json` (strict, esnext module), and `.gitignore` (data/, node_modules/, .env) at project root
+- [x] T002 [P] Create project directory structure per plan.md: `src/bench/`, `src/web/`, `src/db/`, `src/db/migrations/`, `src/shared/`, `tests/bench/`, `tests/web/`, `tests/db/`, `tests/integration/`, `data/`
+- [x] T003 [P] Install Chart.js as the sole external dependency via `bun add chart.js`, and TypeScript as dev dependency via `bun add -d typescript`
+- [x] T004 [P] Create `config.example.ts` at project root exporting a sample `AppConfig` with 2 example endpoints, web port 3000, db path `./data/llm-monitor.db`, 30-day retention, and cron schedule `"0 * * * *"`
 
 ---
 
@@ -37,11 +37,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Define shared TypeScript types in `src/shared/types.ts`: `AppConfig`, `BenchConfig`, `EndpointConfig`, `WebConfig`, `DbConfig`, `BenchmarkRun`, `MetricsDataPoint`, `ConfigStats`, `ComparisonSeries` — matching the interfaces in `contracts/api.md`
-- [ ] T006 Implement shared config loader in `src/shared/config.ts`: import and validate `config.ts` from project root, resolve API keys from `process.env[apiKeyEnvVar]`, apply defaults (temperature: 0, maxTokens: 100, timeoutMs: 30000, port: 3000, host: "127.0.0.1", retentionDays: 30, dbPath: "./data/llm-monitor.db"), throw on missing required fields
-- [ ] T007 Create database migration `src/db/migrations/0001_initial.sql`: `CREATE TABLE IF NOT EXISTS benchmark_runs` with columns per data-model.md (id INTEGER PK AUTOINCREMENT, config_label TEXT NOT NULL, model TEXT NOT NULL, timestamp TEXT NOT NULL, prompt_tokens INTEGER NOT NULL, comp_tokens INTEGER NOT NULL, total_tokens INTEGER NOT NULL, latency_ms INTEGER NOT NULL, tps REAL NOT NULL, http_status INTEGER NOT NULL, error_message TEXT), plus indexes `idx_runs_config_timestamp` and `idx_runs_timestamp`; include `PRAGMA journal_mode = WAL;`
-- [ ] T008 Implement database schema and migration runner in `src/db/schema.ts`: open `Database` via Bun.sqlite(), run all `.sql` files from `src/db/migrations/` in order, enable WAL mode, export `initDb(dbPath: string)` function
-- [ ] T009 Implement database query functions in `src/db/queries.ts`: `insertRun(db, run)`, `getMetricsForConfig(db, configLabel, hours)` returning `{dataPoints, stats}`, `getComparisonMetrics(db, hours, configs?)` returning `{series}`, `getConfigsWithData(db)` returning string[], `pruneOldRuns(db, retentionDays)` — all using parameterized queries per data-model.md query patterns; stats computation includes avgTps, p50LatencyMs, p95LatencyMs, successRate, tpsStdDev
+- [x] T005 Define shared TypeScript types in `src/shared/types.ts`: `AppConfig`, `BenchConfig`, `EndpointConfig`, `WebConfig`, `DbConfig`, `BenchmarkRun`, `MetricsDataPoint`, `ConfigStats`, `ComparisonSeries` — matching the interfaces in `contracts/api.md`
+- [x] T006 Implement shared config loader in `src/shared/config.ts`: import and validate `config.ts` from project root, resolve API keys from `process.env[apiKeyEnvVar]`, apply defaults (temperature: 0, maxTokens: 100, timeoutMs: 30000, port: 3000, host: "127.0.0.1", retentionDays: 30, dbPath: "./data/llm-monitor.db"), throw on missing required fields
+- [x] T007 Create database migration `src/db/migrations/0001_initial.sql`: `CREATE TABLE IF NOT EXISTS benchmark_runs` with columns per data-model.md (id INTEGER PK AUTOINCREMENT, config_label TEXT NOT NULL, model TEXT NOT NULL, timestamp TEXT NOT NULL, prompt_tokens INTEGER NOT NULL, comp_tokens INTEGER NOT NULL, total_tokens INTEGER NOT NULL, latency_ms INTEGER NOT NULL, tps REAL NOT NULL, http_status INTEGER NOT NULL, error_message TEXT), plus indexes `idx_runs_config_timestamp` and `idx_runs_timestamp`; include `PRAGMA journal_mode = WAL;`
+- [x] T008 Implement database schema and migration runner in `src/db/schema.ts`: open `Database` via Bun.sqlite(), run all `.sql` files from `src/db/migrations/` in order, enable WAL mode, export `initDb(dbPath: string)` function
+- [x] T009 Implement database query functions in `src/db/queries.ts`: `insertRun(db, run)`, `getMetricsForConfig(db, configLabel, hours)` returning `{dataPoints, stats}`, `getComparisonMetrics(db, hours, configs?)` returning `{series}`, `getConfigsWithData(db)` returning string[], `pruneOldRuns(db, retentionDays)` — all using parameterized queries per data-model.md query patterns; stats computation includes avgTps, p50LatencyMs, p95LatencyMs, successRate, tpsStdDev
 
 **Checkpoint**: Foundation ready — shared types, config loader, database layer all functional. User story implementation can now begin in parallel.
 
@@ -55,10 +55,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [P] [US1] Implement HTTP server entry point in `src/web/index.ts`: load config via `src/shared/config.ts`, init DB via `src/db/schema.ts`, start `Bun.serve()` on configured host/port with routes from `src/web/routes.ts`, log startup message, handle SIGTERM/SIGINT for graceful shutdown
-- [ ] T011 [P] [US1] Implement API route handlers in `src/web/routes.ts`: `GET /api/configs` → call `getConfigsWithData`, `GET /api/metrics?config=&hours=` → call `getMetricsForConfig`, `GET /api/metrics/compare?hours=&configs=` → call `getComparisonMetrics`, `GET /` → serve dashboard HTML, `GET /assets/*` → serve static files from `src/web/static/`
-- [ ] T012 [US1] Build dashboard HTML page in `src/web/static/index.html`: responsive tile grid layout, each tile contains a `<canvas>` for the Chart.js line graph and a stats summary area (avg TPS, p50 latency, p95 latency, success rate, std dev), a placeholder section for the comparison graph (US2), consistent styling with readable fonts and card shadows, empty state message "No data yet" for zero-data configurations
-- [ ] T013 [US1] Implement client-side tile rendering in `src/web/static/app.js`: fetch `/api/configs` to get config list, for each config fetch `/api/metrics?config=<label>&hours=48`, render a Chart.js line graph on each tile's canvas (x-axis: time, y-axis: TPS, point colors: green for success, red for failure), populate stats summary below each graph, auto-refresh data every 60 seconds
+- [x] T010 [P] [US1] Implement HTTP server entry point in `src/web/index.ts`: load config via `src/shared/config.ts`, init DB via `src/db/schema.ts`, start `Bun.serve()` on configured host/port with routes from `src/web/routes.ts`, log startup message, handle SIGTERM/SIGINT for graceful shutdown
+- [x] T011 [P] [US1] Implement API route handlers in `src/web/routes.ts`: `GET /api/configs` → call `getConfigsWithData`, `GET /api/metrics?config=&hours=` → call `getMetricsForConfig`, `GET /api/metrics/compare?hours=&configs=` → call `getComparisonMetrics`, `GET /` → serve dashboard HTML, `GET /assets/*` → serve static files from `src/web/static/`
+- [x] T012 [US1] Build dashboard HTML page in `src/web/static/index.html`: responsive tile grid layout, each tile contains a `<canvas>` for the Chart.js line graph and a stats summary area (avg TPS, p50 latency, p95 latency, success rate, std dev), a placeholder section for the comparison graph (US2), consistent styling with readable fonts and card shadows, empty state message "No data yet" for zero-data configurations
+- [x] T013 [US1] Implement client-side tile rendering in `src/web/static/app.js`: fetch `/api/configs` to get config list, for each config fetch `/api/metrics?config=<label>&hours=48`, render a Chart.js line graph on each tile's canvas (x-axis: time, y-axis: TPS, point colors: green for success, red for failure), populate stats summary below each graph, auto-refresh data every 60 seconds
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently. Dashboard shows per-configuration tiles with 48h TPS graphs and statistics.
 
@@ -72,8 +72,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Add comparison graph section to `src/web/static/index.html`: a dedicated `<canvas>` element above or below the tile grid, a row of toggle buttons/checkboxes (one per configuration) for selecting which lines appear, all configurations selected by default
-- [ ] T015 [US2] Implement comparison graph rendering in `src/web/static/app.js`: fetch `/api/metrics/compare?hours=24`, render a multi-dataset Chart.js line graph (one dataset per config, each with a distinct color), bind toggle button click events to add/remove datasets from the chart, handle all-deselected empty state with "Select configurations to compare" message, update on auto-refresh cycle
+- [x] T014 [US2] Add comparison graph section to `src/web/static/index.html`: a dedicated `<canvas>` element above or below the tile grid, a row of toggle buttons/checkboxes (one per configuration) for selecting which lines appear, all configurations selected by default
+- [x] T015 [US2] Implement comparison graph rendering in `src/web/static/app.js`: fetch `/api/metrics/compare?hours=24`, render a multi-dataset Chart.js line graph (one dataset per config, each with a distinct color), bind toggle button click events to add/remove datasets from the chart, handle all-deselected empty state with "Select configurations to compare" message, update on auto-refresh cycle
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently. Dashboard shows tiles plus comparison graph with selection toggles.
 
@@ -87,11 +87,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T016 [P] [US3] Implement bench entry point in `src/bench/index.ts`: load config via `src/shared/config.ts`, init DB via `src/db/schema.ts`, call `runAllEndpoints()`, then call `pruneOldRuns()`, then exit (one-shot — no scheduling loop, no SIGTERM handling needed)
-- [ ] T017 [P] [US3] Implement config loader for bench process in `src/bench/config.ts`: export `loadEndpoints()` that reads config, validates each endpoint has a non-empty API key in env (loaded from `.env` by Bun automatically), returns the endpoint list
-- [ ] T018 [US3] Implement endpoint runner in `src/bench/runner.ts`: export `runEndpoint(db, endpoint)` that sends `POST {baseUrl}/v1/chat/completions` with `fetch()`, measures wall-clock latency with `performance.now()`, parses the OpenAI response (usage.prompt_tokens, usage.completion_tokens, usage.total_tokens, model), computes TPS = completionTokens / (latencyMs / 1000), inserts result via `insertRun()`; on HTTP error (non-2xx or network failure), record httpStatus and errorMessage and continue
-- [ ] T019 [US3] Implement scheduler orchestrator in `src/bench/scheduler.ts`: export `runAllEndpoints(db, config)` that iterates `config.bench.endpoints`, calls `runEndpoint()` for each sequentially, catches and logs per-endpoint errors without aborting the batch, logs start/completion of each run cycle
-- [ ] T020 [US3] Implement cron setup script in `src/bench/setup-cron.ts`: use `Bun.cron()` to register an OS-level cron job that runs `bun run src/bench/index.ts` on the configured schedule; add `bench:setup` script to `package.json`; log confirmation of job registration
+- [x] T016 [P] [US3] Implement bench entry point in `src/bench/index.ts`: load config via `src/shared/config.ts`, init DB via `src/db/schema.ts`, call `runAllEndpoints()`, then call `pruneOldRuns()`, then exit (one-shot — no scheduling loop, no SIGTERM handling needed)
+- [x] T017 [P] [US3] Implement config loader for bench process in `src/bench/config.ts`: export `loadEndpoints()` that reads config, validates each endpoint has a non-empty API key in env (loaded from `.env` by Bun automatically), returns the endpoint list
+- [x] T018 [US3] Implement endpoint runner in `src/bench/runner.ts`: export `runEndpoint(db, endpoint)` that sends `POST {baseUrl}/v1/chat/completions` with `fetch()`, measures wall-clock latency with `performance.now()`, parses the OpenAI response (usage.prompt_tokens, usage.completion_tokens, usage.total_tokens, model), computes TPS = completionTokens / (latencyMs / 1000), inserts result via `insertRun()`; on HTTP error (non-2xx or network failure), record httpStatus and errorMessage and continue
+- [x] T019 [US3] Implement scheduler orchestrator in `src/bench/scheduler.ts`: export `runAllEndpoints(db, config)` that iterates `config.bench.endpoints`, calls `runEndpoint()` for each sequentially, catches and logs per-endpoint errors without aborting the batch, logs start/completion of each run cycle
+- [x] T020 [US3] Implement cron setup script in `src/bench/setup-cron.ts`: use `Bun.cron()` to register an OS-level cron job that runs `bun run src/bench/index.ts` on the configured schedule; add `bench:setup` script to `package.json`; log confirmation of job registration
 
 **Checkpoint**: All user stories should now be independently functional. Bench process generates live data, dashboard displays it.
 
@@ -101,9 +101,9 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T021 Implement data retention pruning: call `pruneOldRuns(db, retentionDays)` at the end of each benchmark run in `src/bench/index.ts`, and on web server startup in `src/web/index.ts`
-- [ ] T022 [P] Add `console.log`/`console.error` logging throughout both components: bench logs each endpoint result (label, TPS, status), errors, and run cycle start/end; web logs startup, request paths, DB errors
-- [ ] T023 [P] Create `Makefile` at project root with targets: `bench` → `bun run src/bench/index.ts`, `bench:setup` → `bun run src/bench/setup-cron.ts`, `web` → `bun run src/web/index.ts`, `test` → `bun test`, `fmt` → `bun fmt`, `typecheck` → `bunx tsc --noEmit`
+- [x] T021 Implement data retention pruning: call `pruneOldRuns(db, retentionDays)` at the end of each benchmark run in `src/bench/index.ts`, and on web server startup in `src/web/index.ts`
+- [x] T022 [P] Add `console.log`/`console.error` logging throughout both components: bench logs each endpoint result (label, TPS, status), errors, and run cycle start/end; web logs startup, request paths, DB errors
+- [x] T023 [P] Create `Makefile` at project root with targets: `bench` → `bun run src/bench/index.ts`, `bench:setup` → `bun run src/bench/setup-cron.ts`, `web` → `bun run src/web/index.ts`, `test` → `bun test`, `fmt` → `npx prettier --write`, `typecheck` → `bunx tsc --noEmit`
 - [ ] T024 Run quickstart validation: register cron job via `bench:setup`, run `bench` manually, start web process, open dashboard in browser, verify tiles and comparison graph render with live data, verify auto-refresh works
 
 ---

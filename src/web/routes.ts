@@ -1,0 +1,85 @@
+import type { Database } from "../db/schema";
+import type { AppConfig } from "../shared/types";
+import {
+  getConfigsWithData,
+  getMetricsForConfig,
+  getComparisonMetrics,
+} from "../db/queries";
+import { readFile } from "fs";
+import { join } from "path";
+
+export function createRouter(db: Database, config: AppConfig) {
+  const staticDir = join(import.meta.dir, "static");
+
+  return async (req: Request): Promise<Response> => {
+    const url = new URL(req.url);
+    const path = url.pathname;
+    console.log(`${req.method} ${path}`);
+
+    if (path === "/api/configs") {
+      const configs = getConfigsWithData(db);
+      return Response.json({ configs });
+    }
+
+    if (path === "/api/metrics") {
+      const label = url.searchParams.get("config");
+      if (!label) {
+        return Response.json(
+          { error: "Missing config parameter" },
+          { status: 400 },
+        );
+      }
+      const hours = parseInt(url.searchParams.get("hours") ?? "48", 10);
+      const metrics = getMetricsForConfig(db, label, hours);
+      return Response.json(metrics);
+    }
+
+    if (path === "/api/metrics/compare") {
+      const hours = parseInt(url.searchParams.get("hours") ?? "24", 10);
+      const configsParam = url.searchParams.get("configs");
+      const configs = configsParam
+        ? configsParam.split(",").filter(Boolean)
+        : undefined;
+      const result = getComparisonMetrics(db, hours, configs);
+      return Response.json(result);
+    }
+
+    if (path === "/" || path === "/index.html") {
+      return serveFile(join(staticDir, "index.html"), "text/html");
+    }
+
+    if (path.startsWith("/")) {
+      const filePath = join(staticDir, path);
+      const contentType = guessContentType(path);
+      return serveFile(filePath, contentType);
+    }
+
+    return new Response("Not Found", { status: 404 });
+  };
+
+  function serveFile(filePath: string, contentType: string): Promise<Response> {
+    return new Promise((resolve) => {
+      readFile(filePath, (err, data) => {
+        if (err) {
+          resolve(new Response("Not Found", { status: 404 }));
+          return;
+        }
+        resolve(
+          new Response(data, {
+            headers: { "Content-Type": contentType },
+          }),
+        );
+      });
+    });
+  }
+}
+
+function guessContentType(path: string): string {
+  if (path.endsWith(".js")) return "application/javascript";
+  if (path.endsWith(".css")) return "text/css";
+  if (path.endsWith(".html")) return "text/html";
+  if (path.endsWith(".png")) return "image/png";
+  if (path.endsWith(".svg")) return "image/svg+xml";
+  if (path.endsWith(".ico")) return "image/x-icon";
+  return "application/octet-stream";
+}
