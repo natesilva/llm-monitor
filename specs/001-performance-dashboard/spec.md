@@ -97,12 +97,12 @@ database at the expected interval.
    scheduler processes that endpoint, **Then** the failure is recorded in the
    database with an error message and the scheduler continues to the next
    endpoint.
-4. **Given** the scheduler is running, **When** a new configuration is added to
-   the configuration file, **Then** the scheduler picks it up on the next run
-   cycle without requiring a restart.
-5. **Given** the scheduler is running, **When** the user starts the system,
-   **Then** the first benchmark run begins immediately rather than waiting for
-   the first scheduled interval.
+4. **Given** a new configuration is added to the configuration file, **When** the
+   next scheduled run fires, **Then** the new configuration is included in the
+   benchmark run automatically (config is re-read each invocation).
+5. **Given** the user runs the benchmark manually, **When** `bun run bench` is
+   executed, **Then** all configured endpoints are tested immediately and
+   results are recorded.
 
 ### Edge Cases
 
@@ -147,6 +147,8 @@ database at the expected interval.
 - **FR-011**: Benchmark results MUST persist across system restarts.
 - **FR-012**: The system MUST tolerate individual endpoint failures without
   aborting the full benchmark run.
+- **FR-013**: The dashboard MUST auto-refresh data by polling the API endpoints
+  every 60 seconds, updating graphs and statistics without a full page reload.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -178,6 +180,13 @@ database at the expected interval.
   and is reflected in graphs and statistics without requiring a manual page
   reload or restart.
 
+## Clarifications
+
+### Session 2026-05-08
+
+- Q: Will environment variables loaded from a `.env` file be available to the scheduled runner? → A: Yes. Bun automatically loads `.env` at process startup before any code executes. With OS-level cron (via `Bun.cron()`), each invocation starts a fresh Bun process that loads `.env` from the working directory. The cron setup script MUST configure the job's working directory to the project root so `.env` is found. API keys are resolved via `process.env[apiKeyEnvVar]` at config load time.
+- Q: How should the dashboard auto-refresh (SC-005)? → A: HTTP polling — client fetches updated data every 60 seconds via existing API endpoints.
+
 ## Assumptions
 
 - The system is deployed on a single machine for personal/local use — no
@@ -188,8 +197,11 @@ database at the expected interval.
   required.
 - The dashboard is viewed in a modern web browser on a desktop or laptop
   screen — mobile responsiveness is not required for v1.
-- API keys for providers are stored in the configuration file or environment
-  variables — no secret management service integration.
+- API keys for providers are stored in environment variables (loaded
+  automatically from `.env` by Bun at process startup) and referenced by name
+  in the configuration file — no secret management service integration. The
+  OS-level cron job's working directory MUST be set to the project root so
+  that `.env` is found by each bench invocation.
 - The benchmark prompt is simple (e.g., a short text generation) and is the same
   across all configurations to enable fair comparison.
 - The default schedule interval is every 60 minutes unless the user overrides it.

@@ -1,23 +1,20 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 0.0.0 (template) → 1.0.0 (initial fill)
-  Modified principles: N/A (all were template placeholders, none previously defined)
-    - [PRINCIPLE_1_NAME] → I. Scheduled Benchmarking
-    - [PRINCIPLE_2_NAME] → II. Metrics Dashboard
-    - [PRINCIPLE_3_NAME] → III. OpenAI-API Compatible
-    - [PRINCIPLE_4_NAME] → IV. Persistent Metrics Store
-    - [PRINCIPLE_5_NAME] → V. Minimal & Composable
-  Added sections:
-    - Architecture & Deployment (was [SECTION_2_NAME])
-    - Development Workflow (was [SECTION_3_NAME])
-    - Governance (filled from template)
-  Removed sections: N/A
+  Version change: 0.0.0 (template) → 1.0.0 (initial fill) → 1.1.0 (architecture update)
+  v1.0.0: Initial fill of all template placeholders
+  v1.1.0: Updated Process Topology — bench process changed from long-running
+    daemon to one-shot runner invoked by OS-level cron (via Bun.cron()).
+    Rationale: User requested no long-running bench daemon; OS-level cron
+    is simpler and more robust.
+  Modified principles: N/A (principles unchanged)
+  Modified sections:
+    - Architecture & Deployment > Process Topology
   Templates requiring updates:
-    - .specify/templates/plan-template.md ✅ no changes needed (generic gates)
-    - .specify/templates/spec-template.md ✅ no changes needed (generic)
-    - .specify/templates/tasks-template.md ✅ no changes needed (generic)
-    - .specify/templates/checklist-template.md ✅ no changes needed (generic)
+    - .specify/templates/plan-template.md ✅ no changes needed
+    - .specify/templates/spec-template.md ✅ no changes needed
+    - .specify/templates/tasks-template.md ✅ no changes needed
+    - .specify/templates/checklist-template.md ✅ no changes needed
   Follow-up TODOs: None
 -->
 
@@ -71,12 +68,13 @@ with clear startup/shutdown semantics.
 
 ### Process Topology
 
-- `llm-monitor-bench`: Long-running daemon. On start it reads configuration,
-  establishes database connection, then enters the scheduling loop. Must handle
-  SIGTERM/SIGINT gracefully (finish in-flight benchmark, then exit).
-- `llm-monitor-web`: HTTP server serving the metrics dashboard. Must start up
-  without any existing database (empty state renders "no data" view, not an
-  error).
+- `llm-monitor-bench`: One-shot benchmark runner. Invoked by an OS-level
+  scheduled job (registered via `Bun.cron()`). On each invocation it reads
+  configuration, runs all endpoints, records results, prunes old data, and
+  exits. No process stays running between invocations.
+- `llm-monitor-web`: Long-running HTTP server serving the metrics dashboard.
+  Must start up without any existing database (empty state renders "no data"
+  view, not an error).
 
 ### Configuration
 
@@ -133,4 +131,4 @@ the principles herein.
 - Implementation plans MUST justify any complexity that appears to violate
   the Minimal & Composable principle.
 
-**Version**: 1.0.0 | **Ratified**: 2026-05-08 | **Last Amended**: 2026-05-08
+**Version**: 1.1.0 | **Ratified**: 2026-05-08 | **Last Amended**: 2026-05-08
