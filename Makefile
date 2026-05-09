@@ -16,7 +16,7 @@ web:
 	bun run src/web/index.ts
 
 web-dev:
-	bun --hot src/web/index.ts
+	bun --watch src/web/index.ts
 
 test:
 	bun test

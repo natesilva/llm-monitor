@@ -11,5 +11,5 @@ No new entities. No schema changes. No data flow changes.
 
 | File | Change |
 |------|--------|
-| package.json | Add `"web:dev": "bun --hot src/web/index.ts"` script |
+| package.json | Add `"web:dev": "bun --watch src/web/index.ts"` script |
 | Makefile | Add `web-dev` target |

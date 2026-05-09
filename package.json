@@ -6,7 +6,7 @@
     "bench": "bun run src/bench/index.ts",
     "cron": "bun run src/bench/cron.ts",
     "web": "bun run src/web/index.ts",
-    "web:dev": "bun --hot src/web/index.ts",
+    "web:dev": "bun --watch src/web/index.ts",
     "test": "bun test",
     "lint": "bunx biome check src/",
     "fmt": "bunx biome check --write src/",

@@ -51,6 +51,6 @@ As a developer working on the web dashboard, I want the web server to automatica
 ## Assumptions
 
 - Auto-reload is a development-time convenience only — it has no effect on production deployments or cron-triggered bench runs
-- The feature uses `bun --hot` which is a built-in Bun flag that watches imported files and hot-reloads the process on changes — no external dependencies or custom watcher code needed
-- Debouncing and error recovery are handled natively by `bun --hot`
+- The feature uses `bun --watch` which is a built-in Bun flag that watches imported files and fully restarts the process on changes — no external dependencies or custom watcher code needed
+- Debouncing and error recovery are handled natively by `bun --watch`
 - Only files imported by the web server process are watched (which covers all of `src/` that the server depends on)

@@ -29,7 +29,7 @@ No tasks required in this phase.
 
 ## Phase 2: Foundational
 
-**Purpose**: No blocking prerequisites — the feature uses `bun --hot` (built-in) with no new source code or infrastructure.
+**Purpose**: No blocking prerequisites — the feature uses `bun --watch` (built-in) with no new source code or infrastructure.
 
 No tasks required in this phase.
 
@@ -37,14 +37,14 @@ No tasks required in this phase.
 
 ## Phase 3: User Story 1 - Automatic Web Server Restart on Code Changes (Priority: P1) 🎯 MVP
 
-**Goal**: Add a `web:dev` npm script and `web-dev` Makefile target that runs the web server with `bun --hot`, enabling automatic restart on source file changes. The default `web` command remains unchanged.
+**Goal**: Add a `web:dev` npm script and `web-dev` Makefile target that runs the web server with `bun --watch`, enabling automatic restart on source file changes. The default `web` command remains unchanged.
 
 **Independent Test**: Run `bun run web:dev`, edit a file in `src/`, verify the server restarts automatically. Then run `bun run web` and confirm no file-watching behavior.
 
 ### Implementation for User Story 1
 
-- [x] T001 [P] [US1] Add `"web:dev": "bun --hot src/web/index.ts"` script to package.json
-- [x] T002 [P] [US1] Add `web-dev` target to Makefile running `bun --hot src/web/index.ts`
+- [x] T001 [P] [US1] Add `"web:dev": "bun --watch src/web/index.ts"` script to package.json
+- [x] T002 [P] [US1] Add `web-dev` target to Makefile running `bun --watch src/web/index.ts`
 - [x] T003 [US1] Add `web-dev` to `.PHONY` declaration in Makefile
 - [x] T004 [US1] Run lint and typecheck to verify no regressions
 
@@ -114,5 +114,5 @@ This feature has a single user story, so delivery is one increment.
 - [P] tasks = different files, no dependencies
 - [Story] label maps task to specific user story for traceability
 - No source code changes — only package.json and Makefile
-- `bun --hot` handles debouncing, error recovery, and process lifecycle natively
+- `bun --watch` handles debouncing, error recovery, and process lifecycle natively
 - Commit after each task or logical group
