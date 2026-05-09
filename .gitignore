@@ -3,5 +3,6 @@ dist/
 data/
 .env*
 *.db
+*.log
 config.ts
 .DS_Store
