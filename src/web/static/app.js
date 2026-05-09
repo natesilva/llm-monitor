@@ -12,8 +12,8 @@ const COLORS = [
 ];
 
 let comparisonChart = null;
-let tileCharts = {};
-let activeConfigs = new Set();
+const tileCharts = {};
+const activeConfigs = new Set();
 let allConfigs = [];
 
 function configColor(index) {
@@ -41,7 +41,7 @@ async function renderToggles() {
   container.innerHTML = "";
   allConfigs.forEach((cfg, i) => {
     const btn = document.createElement("button");
-    btn.className = "toggle-btn" + (activeConfigs.has(cfg) ? " active" : "");
+    btn.className = `toggle-btn${activeConfigs.has(cfg) ? " active" : ""}`;
     btn.textContent = cfg;
     btn.style.setProperty("--cfg-color", configColor(i));
     btn.addEventListener("click", () => {
@@ -58,10 +58,10 @@ async function renderToggles() {
   });
 
   if (activeConfigs.size === 0 && allConfigs.length > 0) {
-    allConfigs.forEach((c) => activeConfigs.add(c));
-    container
-      .querySelectorAll(".toggle-btn")
-      .forEach((b) => b.classList.add("active"));
+    for (const c of allConfigs) activeConfigs.add(c);
+    for (const b of container.querySelectorAll(".toggle-btn")) {
+      b.classList.add("active");
+    }
   }
 }
 
@@ -71,11 +71,15 @@ async function renderTiles() {
 
   for (const cfg of allConfigs) {
     existing.add(cfg);
-    if (tileCharts[cfg]) continue;
 
     const metrics = await fetchJSON(
       `/api/metrics?config=${encodeURIComponent(cfg)}&hours=48`,
     );
+
+    if (tileCharts[cfg]) {
+      updateTileChart(cfg, metrics);
+      continue;
+    }
 
     const tile = document.createElement("div");
     tile.className = "tile";
@@ -92,7 +96,7 @@ async function renderTiles() {
           <span class="tile-label">${cfg}</span>
           <span class="tile-model">${metrics.dataPoints[metrics.dataPoints.length - 1].model || ""}</span>
         </div>
-        <canvas class="tile-canvas" id="canvas-${cfg}"></canvas>
+        <div class="tile-canvas-wrap"><canvas class="tile-canvas" id="canvas-${cfg}"></canvas></div>
         <div class="tile-stats">
           <div class="stat"><div class="stat-value">${metrics.stats.avgTps}</div><div class="stat-label">Avg TPS</div></div>
           <div class="stat"><div class="stat-value">${metrics.stats.p50LatencyMs}ms</div><div class="stat-label">P50 Latency</div></div>
@@ -144,7 +148,7 @@ function createTileChart(canvas, metrics, color) {
         {
           data: metrics.dataPoints.map((d) => d.tps),
           borderColor: color,
-          backgroundColor: color + "20",
+          backgroundColor: `${color}20`,
           pointBackgroundColor: pointColors,
           pointRadius: 3,
           pointHoverRadius: 5,
@@ -173,6 +177,54 @@ function createTileChart(canvas, metrics, color) {
   });
 
   tileCharts[metrics.config] = chart;
+}
+
+function updateTileChart(cfg, metrics) {
+  const chart = tileCharts[cfg];
+  if (!chart) return;
+
+  const tile = document.getElementById(`tile-${cfg}`);
+  if (!tile) return;
+
+  const colorIdx = allConfigs.indexOf(cfg);
+  const color = configColor(colorIdx);
+
+  const labels = metrics.dataPoints.map((d) => {
+    const dt = new Date(d.timestamp);
+    return dt.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  });
+
+  const pointColors = metrics.dataPoints.map((d) =>
+    d.httpStatus >= 200 && d.httpStatus < 300 ? color : "#ef4444",
+  );
+
+  chart.data.labels = labels;
+  chart.data.datasets[0].data = metrics.dataPoints.map((d) => d.tps);
+  chart.data.datasets[0].pointBackgroundColor = pointColors;
+  chart.update("none");
+
+  const statsEl = tile.querySelector(".tile-stats");
+  if (statsEl) {
+    const values = statsEl.querySelectorAll(".stat-value");
+    if (values.length >= 5) {
+      values[0].textContent = metrics.stats.avgTps;
+      values[1].textContent = `${metrics.stats.p50LatencyMs}ms`;
+      values[2].textContent = `${metrics.stats.p95LatencyMs}ms`;
+      values[3].textContent = `${(metrics.stats.successRate * 100).toFixed(0)}%`;
+      values[4].textContent = metrics.stats.tpsStdDev;
+    }
+  }
+
+  const modelEl = tile.querySelector(".tile-model");
+  if (modelEl && metrics.dataPoints.length > 0) {
+    modelEl.textContent =
+      metrics.dataPoints[metrics.dataPoints.length - 1].model || "";
+  }
 }
 
 async function renderComparison() {
