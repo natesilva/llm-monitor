@@ -3,6 +3,7 @@ import type {
   ComparisonResponse,
   ComparisonSeries,
   ConfigStats,
+  DataPointsResponse,
   MetricsDataPoint,
   MetricsResponse,
 } from "../shared/types";
@@ -123,6 +124,39 @@ export function getComparisonMetrics(
   }
 
   return { hours, series };
+}
+
+export function getDataPointsForConfig(
+  db: Database,
+  configLabel: string,
+  hours: number = 48,
+  limit: number = 50,
+): DataPointsResponse {
+  const since = new Date(Date.now() - hours * 3600_000).toISOString();
+
+  const rows = db
+    .query(
+      `SELECT timestamp, tps, latency_ms, http_status
+       FROM benchmark_runs
+       WHERE config_label = ? AND timestamp >= ?
+       ORDER BY timestamp DESC
+       LIMIT ?`,
+    )
+    .all(configLabel, since, limit) as {
+    timestamp: string;
+    tps: number;
+    latency_ms: number;
+    http_status: number;
+  }[];
+
+  const dataPoints: MetricsDataPoint[] = rows.map((r) => ({
+    timestamp: r.timestamp,
+    tps: r.tps,
+    latencyMs: r.latency_ms,
+    httpStatus: r.http_status,
+  }));
+
+  return { config: configLabel, hours, dataPoints };
 }
 
 export function pruneOldRuns(db: Database, retentionDays: number): number {

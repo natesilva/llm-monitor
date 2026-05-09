@@ -125,6 +125,26 @@ describe("web routes", () => {
     expect(body.series.length).toBe(2);
   });
 
+  it("returns data points from /api/metrics/data-points", async () => {
+    const res = await router(
+      new Request(
+        "http://localhost/api/metrics/data-points?config=gpt-4o&hours=48&limit=50",
+      ),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.config).toBe("gpt-4o");
+    expect(Array.isArray(body.dataPoints)).toBe(true);
+    expect(body.dataPoints.length).toBe(5);
+  });
+
+  it("returns 400 when config param missing from /api/metrics/data-points", async () => {
+    const res = await router(
+      new Request("http://localhost/api/metrics/data-points?hours=48"),
+    );
+    expect(res.status).toBe(400);
+  });
+
   it("serves index.html for /", async () => {
     const res = await router(new Request("http://localhost/"));
     expect(res.status).toBe(200);

@@ -20,6 +20,81 @@ function configColor(index) {
   return COLORS[index % COLORS.length];
 }
 
+function resolveTheme(mode) {
+  if (mode === "auto") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }
+  return mode;
+}
+
+function applyTheme(mode) {
+  document.documentElement.setAttribute("data-theme", resolveTheme(mode));
+  localStorage.setItem("theme", mode);
+  updateThemeToggleUI(mode);
+  updateChartsTheme();
+}
+
+function initTheme() {
+  const stored = localStorage.getItem("theme") || "auto";
+  applyTheme(stored);
+
+  window
+    .matchMedia("(prefers-color-scheme: dark)")
+    .addEventListener("change", () => {
+      if (localStorage.getItem("theme") === "auto") {
+        document.documentElement.setAttribute(
+          "data-theme",
+          resolveTheme("auto"),
+        );
+        updateChartsTheme();
+      }
+    });
+}
+
+function updateThemeToggleUI(mode) {
+  const buttons = document.querySelectorAll("#theme-toggle .toggle-btn");
+  for (const btn of buttons) {
+    btn.classList.toggle("active", btn.dataset.mode === mode);
+  }
+}
+
+function updateChartsTheme() {
+  const style = getComputedStyle(document.documentElement);
+  const tick = style.getPropertyValue("--tick").trim();
+  const grid = style.getPropertyValue("--grid").trim();
+  const legend = style.getPropertyValue("--chart-legend").trim();
+  const yTitle = style.getPropertyValue("--fg-subtle").trim();
+
+  Chart.defaults.color = tick;
+  Chart.defaults.borderColor = grid;
+
+  if (comparisonChart) {
+    comparisonChart.options.scales.x.ticks.color = tick;
+    comparisonChart.options.scales.x.grid.color = grid;
+    comparisonChart.options.scales.y.ticks.color = tick;
+    comparisonChart.options.scales.y.grid.color = grid;
+    comparisonChart.options.scales.y.title.color = yTitle;
+    comparisonChart.options.plugins.legend.labels.color = legend;
+    comparisonChart.update("none");
+  }
+
+  for (const chart of Object.values(tileCharts)) {
+    chart.options.scales.x.ticks.color = tick;
+    chart.options.scales.x.grid.color = grid;
+    chart.options.scales.y.ticks.color = tick;
+    chart.options.scales.y.grid.color = grid;
+    chart.update("none");
+  }
+}
+
+document.getElementById("theme-toggle").addEventListener("click", (e) => {
+  const btn = e.target.closest(".toggle-btn");
+  if (!btn?.dataset.mode) return;
+  applyTheme(btn.dataset.mode);
+});
+
 async function fetchJSON(url) {
   const res = await fetch(url);
   return res.json();
@@ -87,7 +162,10 @@ async function renderTiles() {
 
     if (metrics.dataPoints.length === 0) {
       tile.innerHTML = `
-        <div class="tile-header"><span class="tile-label">${cfg}</span></div>
+        <div class="tile-header">
+          <span class="tile-label">${cfg}</span>
+          <button class="tile-data-btn" data-config="${cfg}">View data</button>
+        </div>
         <div class="empty-tile">No data yet</div>
       `;
     } else {
@@ -95,6 +173,7 @@ async function renderTiles() {
         <div class="tile-header">
           <span class="tile-label">${cfg}</span>
           <span class="tile-model">${metrics.dataPoints[metrics.dataPoints.length - 1].model || ""}</span>
+          <button class="tile-data-btn" data-config="${cfg}">View data</button>
         </div>
         <div class="tile-canvas-wrap"><canvas class="tile-canvas" id="canvas-${cfg}"></canvas></div>
         <div class="tile-stats">
@@ -140,6 +219,10 @@ function createTileChart(canvas, metrics, color) {
     d.httpStatus >= 200 && d.httpStatus < 300 ? color : "#ef4444",
   );
 
+  const style = getComputedStyle(document.documentElement);
+  const tick = style.getPropertyValue("--tick").trim();
+  const grid = style.getPropertyValue("--grid").trim();
+
   const chart = new Chart(canvas, {
     type: "line",
     data: {
@@ -164,13 +247,13 @@ function createTileChart(canvas, metrics, color) {
       scales: {
         x: {
           display: true,
-          ticks: { maxTicksLimit: 6, color: "#555" },
-          grid: { color: "#1f2230" },
+          ticks: { maxTicksLimit: 6, color: tick },
+          grid: { color: grid },
         },
         y: {
           display: true,
-          ticks: { color: "#555" },
-          grid: { color: "#1f2230" },
+          ticks: { color: tick },
+          grid: { color: grid },
         },
       },
     },
@@ -249,6 +332,12 @@ async function renderComparison() {
     `/api/metrics/compare?hours=24&configs=${selected.map(encodeURIComponent).join(",")}`,
   );
 
+  const style = getComputedStyle(document.documentElement);
+  const tick = style.getPropertyValue("--tick").trim();
+  const grid = style.getPropertyValue("--grid").trim();
+  const legend = style.getPropertyValue("--chart-legend").trim();
+  const yTitle = style.getPropertyValue("--fg-subtle").trim();
+
   const datasets = result.series.map((s, i) => {
     const colorIdx = allConfigs.indexOf(s.config);
     const color = configColor(colorIdx >= 0 ? colorIdx : i);
@@ -264,6 +353,12 @@ async function renderComparison() {
 
   if (comparisonChart) {
     comparisonChart.data.datasets = datasets;
+    comparisonChart.options.scales.x.ticks.color = tick;
+    comparisonChart.options.scales.x.grid.color = grid;
+    comparisonChart.options.scales.y.ticks.color = tick;
+    comparisonChart.options.scales.y.grid.color = grid;
+    comparisonChart.options.scales.y.title.color = yTitle;
+    comparisonChart.options.plugins.legend.labels.color = legend;
     comparisonChart.update("none");
   } else {
     comparisonChart = new Chart(canvas, {
@@ -276,7 +371,7 @@ async function renderComparison() {
           legend: {
             position: "bottom",
             labels: {
-              color: "#aaa",
+              color: legend,
               usePointStyle: true,
               pointStyle: "circle",
             },
@@ -286,13 +381,13 @@ async function renderComparison() {
           x: {
             type: "time",
             time: { tooltipFormat: "MMM d, HH:mm" },
-            ticks: { color: "#555" },
-            grid: { color: "#1f2230" },
+            ticks: { color: tick },
+            grid: { color: grid },
           },
           y: {
-            title: { display: true, text: "Tokens/sec", color: "#888" },
-            ticks: { color: "#555" },
-            grid: { color: "#1f2230" },
+            title: { display: true, text: "Tokens/sec", color: yTitle },
+            ticks: { color: tick },
+            grid: { color: grid },
           },
         },
       },
@@ -300,5 +395,58 @@ async function renderComparison() {
   }
 }
 
+function openOverlay(configLabel) {
+  const dialog = document.getElementById("data-overlay");
+  const titleEl = document.getElementById("overlay-title");
+  const bodyEl = document.getElementById("overlay-body");
+  const tableBody = document.getElementById("data-table-body");
+  const table = document.getElementById("data-table");
+
+  titleEl.textContent = configLabel;
+  tableBody.innerHTML = "";
+  table.style.display = "none";
+
+  const existingMsg = bodyEl.querySelector(".overlay-empty");
+  if (existingMsg) existingMsg.remove();
+
+  dialog.showModal();
+
+  fetchJSON(
+    `/api/metrics/data-points?config=${encodeURIComponent(configLabel)}&hours=48&limit=50`,
+  ).then((result) => {
+    if (result.dataPoints.length === 0) {
+      const msg = document.createElement("p");
+      msg.className = "overlay-empty";
+      msg.textContent = "No data available for this configuration.";
+      bodyEl.appendChild(msg);
+      return;
+    }
+
+    tableBody.innerHTML = result.dataPoints
+      .map(
+        (d) =>
+          `<tr>` +
+          `<td>${new Date(d.timestamp).toLocaleString()}</td>` +
+          `<td>${d.tps}</td>` +
+          `<td>${d.latencyMs}</td>` +
+          `<td>${d.httpStatus}</td>` +
+          `</tr>`,
+      )
+      .join("");
+    table.style.display = "";
+  });
+}
+
+document.getElementById("tiles").addEventListener("click", (e) => {
+  const btn = e.target.closest(".tile-data-btn");
+  if (!btn) return;
+  openOverlay(btn.dataset.config);
+});
+
+document.getElementById("overlay-close").addEventListener("click", () => {
+  document.getElementById("data-overlay").close();
+});
+
+initTheme();
 refresh();
 setInterval(refresh, 60_000);

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import {
   getComparisonMetrics,
   getConfigsWithData,
+  getDataPointsForConfig,
   getMetricsForConfig,
 } from "../db/queries";
 import type { Database } from "../db/schema";
@@ -41,6 +42,20 @@ export function createRouter(db: Database, _config: AppConfig) {
         ? configsParam.split(",").filter(Boolean)
         : undefined;
       const result = getComparisonMetrics(db, hours, configs);
+      return Response.json(result);
+    }
+
+    if (path === "/api/metrics/data-points") {
+      const label = url.searchParams.get("config");
+      if (!label) {
+        return Response.json(
+          { error: "Missing config parameter" },
+          { status: 400 },
+        );
+      }
+      const hours = parseInt(url.searchParams.get("hours") ?? "48", 10);
+      const limit = parseInt(url.searchParams.get("limit") ?? "50", 10);
+      const result = getDataPointsForConfig(db, label, hours, limit);
       return Response.json(result);
     }
 

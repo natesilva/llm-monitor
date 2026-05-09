@@ -81,6 +81,12 @@ export interface ComparisonResponse {
   series: ComparisonSeries[];
 }
 
+export interface DataPointsResponse {
+  config: string;
+  hours: number;
+  dataPoints: MetricsDataPoint[];
+}
+
 export interface ResolvedEndpoint extends EndpointConfig {
   apiKey: string;
 }
