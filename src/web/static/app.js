@@ -20,6 +20,26 @@ function configColor(index) {
   return COLORS[index % COLORS.length];
 }
 
+function saveComparisonSelection() {
+  try {
+    localStorage.setItem(
+      "comparison-configs",
+      JSON.stringify([...activeConfigs]),
+    );
+  } catch {}
+}
+
+function loadComparisonSelection() {
+  try {
+    const raw = localStorage.getItem("comparison-configs");
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function resolveTheme(mode) {
   if (mode === "auto") {
     return window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -114,6 +134,16 @@ async function refresh() {
 async function renderToggles() {
   const container = document.getElementById("toggles");
   container.innerHTML = "";
+
+  if (activeConfigs.size === 0) {
+    const saved = loadComparisonSelection();
+    for (const label of saved) {
+      if (allConfigs.includes(label)) {
+        activeConfigs.add(label);
+      }
+    }
+  }
+
   allConfigs.forEach((cfg, i) => {
     const btn = document.createElement("button");
     btn.className = `toggle-btn${activeConfigs.has(cfg) ? " active" : ""}`;
@@ -127,6 +157,7 @@ async function renderToggles() {
         activeConfigs.add(cfg);
         btn.classList.add("active");
       }
+      saveComparisonSelection();
       renderComparison();
     });
     container.appendChild(btn);
