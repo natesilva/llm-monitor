@@ -1,14 +1,14 @@
-import type { Database } from "../db/schema";
-import type { AppConfig } from "../shared/types";
+import { readFile } from "node:fs";
+import { join } from "node:path";
 import {
+  getComparisonMetrics,
   getConfigsWithData,
   getMetricsForConfig,
-  getComparisonMetrics,
 } from "../db/queries";
-import { readFile } from "fs";
-import { join } from "path";
+import type { Database } from "../db/schema";
+import type { AppConfig } from "../shared/types";
 
-export function createRouter(db: Database, config: AppConfig) {
+export function createRouter(db: Database, _config: AppConfig) {
   const staticDir = join(import.meta.dir, "static");
 
   return async (req: Request): Promise<Response> => {

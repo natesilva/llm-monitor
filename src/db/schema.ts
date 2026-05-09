@@ -1,6 +1,6 @@
 import Database from "bun:sqlite";
-import { readdirSync, readFileSync, mkdirSync } from "fs";
-import { join } from "path";
+import { mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 export function initDb(dbPath: string): Database {
   const dir = join(dbPath, "..");

@@ -1,12 +1,12 @@
-import { loadConfig } from "../shared/config";
-import { initDb } from "../db/schema";
 import { pruneOldRuns } from "../db/queries";
+import { initDb } from "../db/schema";
+import { loadConfig } from "../shared/config";
 import { createRouter } from "./routes";
 
 async function main() {
-  let rawConfig;
+  let rawConfig: { default: import("../shared/types").AppConfig };
   try {
-    // @ts-ignore - config.ts is created by the user from config.example.ts
+    // @ts-expect-error - config.ts is created by the user from config.example.ts
     rawConfig = await import("../../config.ts");
   } catch {
     console.error(

@@ -1,9 +1,9 @@
 import { loadConfig } from "../shared/config";
 
 async function main() {
-  let rawConfig;
+  let rawConfig: { default: import("../shared/types").AppConfig };
   try {
-    // @ts-ignore - config.ts is created by the user from config.example.ts
+    // @ts-expect-error - config.ts is created by the user from config.example.ts
     rawConfig = await import("../../config.ts");
   } catch {
     console.error(
@@ -18,6 +18,7 @@ async function main() {
   console.log(`  Schedule: ${config.bench.schedule}`);
   console.log(`  CWD:      ${process.cwd()}`);
 
+  // biome-ignore lint/suspicious/noExplicitAny: Bun.cron type signature mismatch in @types/bun
   (Bun.cron as any)(
     "llm_monitor",
     config.bench.schedule,

@@ -1,12 +1,12 @@
-import type { Database } from "./schema";
 import type {
   BenchmarkRun,
-  MetricsDataPoint,
-  ConfigStats,
-  MetricsResponse,
-  ComparisonSeries,
   ComparisonResponse,
+  ComparisonSeries,
+  ConfigStats,
+  MetricsDataPoint,
+  MetricsResponse,
 } from "../shared/types";
+import type { Database } from "./schema";
 
 export function insertRun(db: Database, run: Omit<BenchmarkRun, "id">): void {
   db.run(
@@ -113,8 +113,8 @@ export function getComparisonMetrics(
   for (const row of rows) {
     if (!grouped.has(row.config_label)) grouped.set(row.config_label, []);
     grouped
-      .get(row.config_label)!
-      .push({ timestamp: row.timestamp, tps: row.tps });
+      .get(row.config_label)
+      ?.push({ timestamp: row.timestamp, tps: row.tps });
   }
 
   const series: ComparisonSeries[] = [];
