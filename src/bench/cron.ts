@@ -1,0 +1,133 @@
+import { join } from "node:path";
+import { loadConfig } from "../shared/config";
+
+const CRON_JOB_NAME = "LLM_Monitor_Bench";
+
+async function isCronJobRegistered(name: string): Promise<boolean> {
+  if (process.platform === "darwin") {
+    try {
+      const proc = Bun.spawn(["launchctl", "list"], {
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const text = await new Response(proc.stdout).text();
+      await proc.exited;
+      return text.includes(`bun.cron.${name}`);
+    } catch {
+      return false;
+    }
+  }
+
+  if (process.platform === "linux") {
+    try {
+      const proc = Bun.spawn(["crontab", "-l"], {
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const text = await new Response(proc.stdout).text();
+      await proc.exited;
+      return text.includes(name);
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+async function loadRawConfig() {
+  let rawConfig: { default: import("../shared/types").AppConfig };
+  try {
+    // @ts-expect-error - config.ts is created by the user from config.example.ts
+    rawConfig = await import("../../config.ts");
+  } catch {
+    console.error(
+      "Error: config.ts not found. Copy config.example.ts to config.ts and edit it.",
+    );
+    process.exit(1);
+  }
+  return loadConfig(rawConfig.default);
+}
+
+async function register() {
+  const alreadyRegistered = await isCronJobRegistered(CRON_JOB_NAME);
+
+  const config = await loadRawConfig();
+  const workerPath = join(import.meta.dir, "cron-worker.ts");
+
+  await Bun.cron(workerPath, config.bench.schedule, CRON_JOB_NAME);
+
+  if (alreadyRegistered) {
+    console.log("Cron job updated.");
+  } else {
+    console.log("Cron job registered.");
+  }
+  console.log(`  Title:    ${CRON_JOB_NAME}`);
+  console.log(`  Schedule: ${config.bench.schedule}`);
+  console.log(`  Worker:   ${workerPath}`);
+}
+
+async function unregister() {
+  const wasRegistered = await isCronJobRegistered(CRON_JOB_NAME);
+
+  if (!wasRegistered) {
+    console.log(`No cron job found with title "${CRON_JOB_NAME}".`);
+    return;
+  }
+
+  Bun.cron.remove(CRON_JOB_NAME);
+  console.log("Cron job removed.");
+  console.log(`  Title: ${CRON_JOB_NAME}`);
+}
+
+async function status() {
+  const registered = await isCronJobRegistered(CRON_JOB_NAME);
+
+  if (!registered) {
+    console.log(`No cron job registered with title "${CRON_JOB_NAME}".`);
+    console.log("To register one, run: bun run cron register");
+    return;
+  }
+
+  const config = await loadRawConfig();
+  const workerPath = join(import.meta.dir, "cron-worker.ts");
+
+  console.log("Cron job is registered.");
+  console.log(`  Title:    ${CRON_JOB_NAME}`);
+  console.log(`  Schedule: ${config.bench.schedule}`);
+  console.log(`  Worker:   ${workerPath}`);
+}
+
+function printUsage() {
+  console.log("Usage: bun run cron <subcommand>");
+  console.log();
+  console.log("Subcommands:");
+  console.log(
+    "  register    Register (or re-register) the scheduled benchmark cron job",
+  );
+  console.log("  unregister  Remove the scheduled benchmark cron job");
+  console.log("  status      Check whether the cron job is registered");
+}
+
+const subcommand = process.argv[2];
+
+switch (subcommand) {
+  case "register":
+    register().catch((err) => {
+      console.error("Failed to register cron job:", err);
+      process.exit(1);
+    });
+    break;
+  case "unregister":
+    unregister();
+    break;
+  case "status":
+    status().catch((err) => {
+      console.error("Failed to check cron job status:", err);
+      process.exit(1);
+    });
+    break;
+  default:
+    printUsage();
+    process.exit(1);
+}

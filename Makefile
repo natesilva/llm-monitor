@@ -1,10 +1,16 @@
-.PHONY: bench bench-setup web web-dev test lint fmt typecheck
+.PHONY: bench cron-register cron-unregister cron-status web web-dev test lint fmt typecheck
 
 bench:
 	bun run src/bench/index.ts
 
-bench-setup:
-	bun run src/bench/setup-cron.ts
+cron-register:
+	bun run src/bench/cron.ts register
+
+cron-unregister:
+	bun run src/bench/cron.ts unregister
+
+cron-status:
+	bun run src/bench/cron.ts status
 
 web:
 	bun run src/web/index.ts
