@@ -55,7 +55,9 @@ Options:
   await runBench(values.debug ?? false, values.prompt);
 }
 
-main().catch((err) => {
-  console.error("Benchmark run failed:", err);
-  process.exit(1);
-});
+if (import.meta.main) {
+  main().catch((err) => {
+    console.error("Benchmark run failed:", err);
+    process.exit(1);
+  });
+}
