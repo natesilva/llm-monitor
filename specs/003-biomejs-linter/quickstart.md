@@ -13,15 +13,13 @@ No additional setup required. Biome runs via `bunx biome` (no global install nee
 
 ```bash
 # Lint and format check (CI mode — no writes, exits non-zero on issues)
-make lint
-# or: bun run lint
+bun run lint
 
 # Lint and format fix (writes changes)
-make fmt
-# or: bun run fmt
+bun run fmt
 
 # Typecheck (unchanged)
-make typecheck
+bun run typecheck
 ```
 
 ## What Changed

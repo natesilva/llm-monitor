@@ -19,7 +19,7 @@
 
 ## How to Verify
 
-1. `make lint && make typecheck && make test`
-2. `make web-dev` and open in browser
+1. `bun run lint && bun run typecheck && bun run test`
+2. `bun run web:dev` and open in browser
 3. Click Light/Auto/Dark toggle — verify theme changes, persists on reload
 4. Click data button on a tile — verify overlay shows data table, close via X/backdrop/Escape

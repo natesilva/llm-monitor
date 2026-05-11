@@ -17,11 +17,6 @@ bun run web
 bun run web:dev
 ```
 
-Or via Makefile:
-
-```sh
-make web-dev
-```
 
 ## Verification
 
