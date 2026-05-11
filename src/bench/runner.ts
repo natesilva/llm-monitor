@@ -60,8 +60,10 @@ async function runStreamingEndpoint(
   let firstChunkTime: number | null = null;
   let lastChunkTime: number | null = null;
   let totalChunkCount = 0;
-  let streamedTextLength = 0; // fallback token estimate when usage chunk is absent
+  let streamedTextLength = 0;
   let usageReceived = false;
+  let cumulativeTokens = 0;
+  let tt100tTimestamp: number | null = null;
 
   try {
     const controller = new AbortController();
@@ -138,6 +140,11 @@ async function runStreamingEndpoint(
               totalChunkCount++;
               if (hasContent) streamedTextLength += (content as string).length;
               if (hasReasoning) streamedTextLength += (reasoning as string).length;
+              const chunkLength = (hasContent ? (content as string).length : 0) + (hasReasoning ? (reasoning as string).length : 0);
+              cumulativeTokens += Math.round(chunkLength / 4);
+              if (cumulativeTokens >= 100 && tt100tTimestamp === null) {
+                tt100tTimestamp = now;
+              }
             }
           });
         }
@@ -184,6 +191,9 @@ async function runStreamingEndpoint(
   const timeToFirstTokenMs =
     firstChunkTime !== null ? Math.round(firstChunkTime - start) : null;
 
+  const timeToFirst100TokensMs =
+    tt100tTimestamp !== null ? Math.round(tt100tTimestamp - start) : null;
+
   // TPS: all completion tokens over the full generation window (first token → last token).
   let tokensPerSecond: number;
   if (
@@ -214,6 +224,7 @@ async function runStreamingEndpoint(
     latencyMs,
     tokensPerSecond,
     timeToFirstTokenMs,
+    timeToFirst100TokensMs,
     httpStatus,
     errorMessage,
   });
@@ -223,9 +234,11 @@ async function runStreamingEndpoint(
   } else {
     const ttftPart =
       timeToFirstTokenMs !== null ? `${timeToFirstTokenMs}ms TTFT, ` : "";
+    const tt100tPart =
+      timeToFirst100TokensMs !== null ? `${timeToFirst100TokensMs}ms TT100T, ` : "";
     const tokenNote = tokensEstimated ? " (est.)" : "";
     console.log(
-      `[${label}] OK — ${tokensPerSecond.toFixed(1)} TPS, ${ttftPart}${latencyMs}ms total, ${completionTokens}${tokenNote} tokens`,
+      `[${label}] OK — ${tokensPerSecond.toFixed(1)} TPS, ${ttftPart}${tt100tPart}${latencyMs}ms total, ${completionTokens}${tokenNote} tokens`,
     );
   }
 }
@@ -334,6 +347,7 @@ async function runNonStreamingEndpoint(
     latencyMs,
     tokensPerSecond,
     timeToFirstTokenMs: null,
+    timeToFirst100TokensMs: null,
     httpStatus,
     errorMessage,
   });

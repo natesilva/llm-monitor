@@ -11,8 +11,8 @@ import type { Database } from "./schema";
 
 export function insertRun(db: Database, run: Omit<BenchmarkRun, "id">): void {
   db.run(
-    `INSERT INTO benchmark_runs (config_label, model, timestamp, prompt_tokens, comp_tokens, total_tokens, latency_ms, tps, http_status, error_message, ttft_ms)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO benchmark_runs (config_label, model, timestamp, prompt_tokens, comp_tokens, total_tokens, latency_ms, tps, http_status, error_message, ttft_ms, tt100t_ms)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       run.configLabel,
       run.model,
@@ -25,6 +25,7 @@ export function insertRun(db: Database, run: Omit<BenchmarkRun, "id">): void {
       run.httpStatus,
       run.errorMessage ?? null,
       run.timeToFirstTokenMs,
+      run.timeToFirst100TokensMs,
     ],
   );
 }
@@ -47,7 +48,7 @@ export function getMetricsForConfig(
 
   const rows = db
     .query(
-      `SELECT timestamp, tps, latency_ms, http_status, ttft_ms
+      `SELECT timestamp, tps, latency_ms, http_status, ttft_ms, tt100t_ms
        FROM benchmark_runs
        WHERE config_label = ? AND timestamp >= ?
        ORDER BY timestamp`,
@@ -58,6 +59,7 @@ export function getMetricsForConfig(
     latency_ms: number;
     http_status: number;
     ttft_ms: number | null;
+    tt100t_ms: number | null;
   }[];
 
   const dataPoints: MetricsDataPoint[] = rows.map((r) => ({
@@ -66,6 +68,7 @@ export function getMetricsForConfig(
     latencyMs: r.latency_ms,
     httpStatus: r.http_status,
     ttftMs: r.ttft_ms,
+    tt100tMs: r.tt100t_ms,
   }));
 
   const stats = computeStats(
@@ -74,6 +77,7 @@ export function getMetricsForConfig(
       latencyMs: r.latency_ms,
       httpStatus: r.http_status,
       ttftMs: r.ttft_ms,
+      tt100tMs: r.tt100t_ms,
     })),
   );
 
@@ -140,7 +144,7 @@ export function getDataPointsForConfig(
 
   const rows = db
     .query(
-      `SELECT timestamp, tps, latency_ms, http_status, ttft_ms
+      `SELECT timestamp, tps, latency_ms, http_status, ttft_ms, tt100t_ms
        FROM benchmark_runs
        WHERE config_label = ? AND timestamp >= ?
        ORDER BY timestamp DESC
@@ -152,6 +156,7 @@ export function getDataPointsForConfig(
     latency_ms: number;
     http_status: number;
     ttft_ms: number | null;
+    tt100t_ms: number | null;
   }[];
 
   const dataPoints: MetricsDataPoint[] = rows.map((r) => ({
@@ -160,6 +165,7 @@ export function getDataPointsForConfig(
     latencyMs: r.latency_ms,
     httpStatus: r.http_status,
     ttftMs: r.ttft_ms,
+    tt100tMs: r.tt100t_ms,
   }));
 
   return { config: configLabel, hours, dataPoints };
@@ -174,7 +180,7 @@ export function pruneOldRuns(db: Database, retentionDays: number): number {
 }
 
 function computeStats(
-  rows: { tps: number; latencyMs: number; httpStatus: number; ttftMs: number | null }[],
+  rows: { tps: number; latencyMs: number; httpStatus: number; ttftMs: number | null; tt100tMs: number | null }[],
 ): ConfigStats {
   if (rows.length === 0) {
     return {
@@ -185,6 +191,7 @@ function computeStats(
       tpsStdDev: 0,
       p50TtftMs: null,
       p95TtftMs: null,
+      avgTt100tMs: null,
     };
   }
 
@@ -212,6 +219,15 @@ function computeStats(
   const p95TtftMs =
     ttftValues.length > 0 ? Math.round(percentile(ttftValues, 95)) : null;
 
+  const tt100tValues = rows
+    .map((r) => r.tt100tMs)
+    .filter((v): v is number => v !== null);
+
+  const avgTt100tMs =
+    tt100tValues.length > 0
+      ? Math.round(tt100tValues.reduce((a, b) => a + b, 0) / tt100tValues.length)
+      : null;
+
   return {
     avgTps: round2(avgTps),
     p50LatencyMs: Math.round(p50),
@@ -220,6 +236,7 @@ function computeStats(
     tpsStdDev: round2(tpsStdDev),
     p50TtftMs,
     p95TtftMs,
+    avgTt100tMs,
   };
 }
 

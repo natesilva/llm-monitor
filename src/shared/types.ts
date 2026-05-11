@@ -42,6 +42,7 @@ export interface BenchmarkRun {
   latencyMs: number;
   tokensPerSecond: number;
   timeToFirstTokenMs: number | null;
+  timeToFirst100TokensMs: number | null;
   httpStatus: number;
   errorMessage?: string;
 }
@@ -52,6 +53,7 @@ export interface MetricsDataPoint {
   latencyMs: number;
   httpStatus: number;
   ttftMs: number | null;
+  tt100tMs: number | null;
 }
 
 export interface ConfigStats {
@@ -62,6 +64,7 @@ export interface ConfigStats {
   tpsStdDev: number;
   p50TtftMs: number | null;
   p95TtftMs: number | null;
+  avgTt100tMs: number | null;
 }
 
 export interface MetricsResponse {

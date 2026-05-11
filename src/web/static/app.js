@@ -213,6 +213,7 @@ async function renderTiles() {
           <div class="stat"><div class="stat-value">${metrics.stats.p95LatencyMs}ms</div><div class="stat-label">P95 Latency</div></div>
           <div class="stat"><div class="stat-value">${metrics.stats.p50TtftMs !== null ? `${metrics.stats.p50TtftMs}ms` : "N/A"}</div><div class="stat-label">P50 TTFT</div></div>
           <div class="stat"><div class="stat-value">${metrics.stats.p95TtftMs !== null ? `${metrics.stats.p95TtftMs}ms` : "N/A"}</div><div class="stat-label">P95 TTFT</div></div>
+          <div class="stat"><div class="stat-value">${metrics.stats.avgTt100tMs !== null ? `${metrics.stats.avgTt100tMs}ms` : "N/A"}</div><div class="stat-label">Avg TT100T</div></div>
           <div class="stat"><div class="stat-value">${(metrics.stats.successRate * 100).toFixed(0)}%</div><div class="stat-label">Success</div></div>
           <div class="stat"><div class="stat-value">${metrics.stats.tpsStdDev}</div><div class="stat-label">TPS StdDev</div></div>
         </div>
@@ -327,7 +328,7 @@ function updateTileChart(cfg, metrics) {
   const statsEl = tile.querySelector(".tile-stats");
   if (statsEl) {
     const values = statsEl.querySelectorAll(".stat-value");
-    if (values.length >= 7) {
+    if (values.length >= 8) {
       values[0].textContent = metrics.stats.avgTps;
       values[1].textContent = `${metrics.stats.p50LatencyMs}ms`;
       values[2].textContent = `${metrics.stats.p95LatencyMs}ms`;
@@ -335,8 +336,10 @@ function updateTileChart(cfg, metrics) {
         metrics.stats.p50TtftMs !== null ? `${metrics.stats.p50TtftMs}ms` : "N/A";
       values[4].textContent =
         metrics.stats.p95TtftMs !== null ? `${metrics.stats.p95TtftMs}ms` : "N/A";
-      values[5].textContent = `${(metrics.stats.successRate * 100).toFixed(0)}%`;
-      values[6].textContent = metrics.stats.tpsStdDev;
+      values[5].textContent =
+        metrics.stats.avgTt100tMs !== null ? `${metrics.stats.avgTt100tMs}ms` : "N/A";
+      values[6].textContent = `${(metrics.stats.successRate * 100).toFixed(0)}%`;
+      values[7].textContent = metrics.stats.tpsStdDev;
     }
   }
 
@@ -466,6 +469,7 @@ function openOverlay(configLabel) {
           `<td>${new Date(d.timestamp).toLocaleString()}</td>` +
           `<td>${d.tps}</td>` +
           `<td>${d.ttftMs !== null ? `${d.ttftMs}ms` : "N/A"}</td>` +
+          `<td>${d.tt100tMs !== null ? `${d.tt100tMs}ms` : "N/A"}</td>` +
           `<td>${d.latencyMs}</td>` +
           `<td>${d.httpStatus}</td>` +
           `</tr>`,

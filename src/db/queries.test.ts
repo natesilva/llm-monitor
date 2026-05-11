@@ -23,6 +23,7 @@ function baseRun(overrides: Partial<Parameters<typeof insertRun>[1]> = {}): Para
     latencyMs: 500,
     tokensPerSecond: 40,
     timeToFirstTokenMs: null,
+    timeToFirst100TokensMs: null,
     httpStatus: 200,
     ...overrides,
   };
@@ -102,6 +103,7 @@ describe("computeStats via getMetricsForConfig", () => {
     expect(result.stats.tpsStdDev).toBe(0);
     expect(result.stats.p50TtftMs).toBeNull();
     expect(result.stats.p95TtftMs).toBeNull();
+    expect(result.stats.avgTt100tMs).toBeNull();
     expect(result.dataPoints.length).toBe(0);
   });
 
@@ -122,5 +124,61 @@ describe("computeStats via getMetricsForConfig", () => {
     const result = getMetricsForConfig(db, "test", 48);
     expect(result.stats.p50TtftMs).toBe(250);
     expect(result.stats.p95TtftMs).toBe(250);
+  });
+
+  it("returns null avgTt100tMs when all rows have null tt100t", () => {
+    const now = Date.now();
+    for (let i = 0; i < 3; i++) {
+      insertRun(db, baseRun({
+        timestamp: new Date(now - i * 1000).toISOString(),
+        timeToFirst100TokensMs: null,
+      }));
+    }
+    const result = getMetricsForConfig(db, "test", 48);
+    expect(result.stats.avgTt100tMs).toBeNull();
+  });
+
+  it("computes avgTt100tMs when all rows have non-null tt100t", () => {
+    const now = Date.now();
+    const values = [2000, 3000, 4000];
+    for (let i = 0; i < values.length; i++) {
+      insertRun(db, baseRun({
+        timestamp: new Date(now - i * 1000).toISOString(),
+        timeToFirst100TokensMs: values[i],
+      }));
+    }
+    const result = getMetricsForConfig(db, "test", 48);
+    expect(result.stats.avgTt100tMs).toBe(3000);
+  });
+
+  it("computes avgTt100tMs from non-null values only when mixed", () => {
+    const now = Date.now();
+    insertRun(db, baseRun({
+      timestamp: new Date(now - 2000).toISOString(),
+      timeToFirst100TokensMs: 2000,
+    }));
+    insertRun(db, baseRun({
+      timestamp: new Date(now - 1000).toISOString(),
+      timeToFirst100TokensMs: null,
+    }));
+    insertRun(db, baseRun({
+      timestamp: new Date(now).toISOString(),
+      timeToFirst100TokensMs: 4000,
+    }));
+    const result = getMetricsForConfig(db, "test", 48);
+    // Average of [2000, 4000] = 3000
+    expect(result.stats.avgTt100tMs).toBe(3000);
+  });
+
+  it("data points include tt100tMs field matching inserted values", () => {
+    const now = Date.now();
+    insertRun(db, baseRun({ timestamp: new Date(now - 2000).toISOString(), timeToFirst100TokensMs: 1500 }));
+    insertRun(db, baseRun({ timestamp: new Date(now - 1000).toISOString(), timeToFirst100TokensMs: null }));
+
+    const result = getMetricsForConfig(db, "test", 48);
+    expect(result.dataPoints.length).toBe(2);
+    const tt100tValues = result.dataPoints.map((dp) => dp.tt100tMs);
+    expect(tt100tValues).toContain(1500);
+    expect(tt100tValues).toContain(null);
   });
 });
