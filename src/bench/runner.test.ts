@@ -32,6 +32,7 @@ function makeEndpoint(overrides: Partial<ResolvedEndpoint> = {}): ResolvedEndpoi
 function getLastRun(db: Database): {
   tps: number;
   ttft_ms: number | null;
+  tt100t_ms: number | null;
   latency_ms: number;
   http_status: number;
   comp_tokens: number;
@@ -39,11 +40,12 @@ function getLastRun(db: Database): {
 } {
   return db
     .query(
-      "SELECT tps, ttft_ms, latency_ms, http_status, comp_tokens, error_message FROM benchmark_runs ORDER BY rowid DESC LIMIT 1",
+      "SELECT tps, ttft_ms, tt100t_ms, latency_ms, http_status, comp_tokens, error_message FROM benchmark_runs ORDER BY rowid DESC LIMIT 1",
     )
     .get() as {
     tps: number;
     ttft_ms: number | null;
+    tt100t_ms: number | null;
     latency_ms: number;
     http_status: number;
     comp_tokens: number;
@@ -241,5 +243,64 @@ describe("runner integration tests (fetch mocked)", () => {
     // firstChunkTime never set → TTFT = null
     expect(row.ttft_ms).toBeNull();
     expect(row.tps).toBeGreaterThanOrEqual(0);
+  });
+
+  it("T020: streaming with >100 estimated tokens stores non-null tt100t_ms", async () => {
+    const longText = "A".repeat(400);
+    mockFetch(
+      sseResponse([
+        { choices: [{ delta: { content: longText } }] },
+        { choices: [{ delta: { content: "more text here" } }] },
+        {
+          choices: [{ delta: {} }],
+          usage: { prompt_tokens: 5, completion_tokens: 120, total_tokens: 125 },
+        },
+      ]),
+    );
+
+    await runEndpoint(db, makeEndpoint(), false);
+
+    const row = getLastRun(db);
+    expect(row.tt100t_ms).not.toBeNull();
+    expect(row.tt100t_ms!).toBeGreaterThanOrEqual(0);
+    expect(row.tt100t_ms!).toBeLessThanOrEqual(row.latency_ms);
+    expect(row.ttft_ms).not.toBeNull();
+    expect(row.tt100t_ms!).toBeGreaterThanOrEqual(row.ttft_ms!);
+  });
+
+  it("T021: sub-100-token streaming run stores null tt100t_ms", async () => {
+    mockFetch(
+      sseResponse([
+        { choices: [{ delta: { content: "Hello" } }] },
+        { choices: [{ delta: { content: " world" } }] },
+        {
+          choices: [{ delta: {} }],
+          usage: { prompt_tokens: 5, completion_tokens: 15, total_tokens: 20 },
+        },
+      ]),
+    );
+
+    await runEndpoint(db, makeEndpoint(), false);
+
+    const row = getLastRun(db);
+    expect(row.tt100t_ms).toBeNull();
+    expect(row.ttft_ms).not.toBeNull();
+  });
+
+  it("T022: non-streaming run stores null tt100t_ms", async () => {
+    mockFetch(
+      Response.json({
+        model: "test-model",
+        choices: [{ message: { content: "Hello world" } }],
+        usage: { prompt_tokens: 5, completion_tokens: 20, total_tokens: 25 },
+      }),
+    );
+
+    await runEndpoint(db, makeEndpoint({ streaming: false }), false);
+
+    const row = getLastRun(db);
+    expect(row.tt100t_ms).toBeNull();
+    expect(row.ttft_ms).toBeNull();
+    expect(row.http_status).toBe(200);
   });
 });

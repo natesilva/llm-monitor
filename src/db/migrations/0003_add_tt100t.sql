@@ -1,0 +1,1 @@
+ALTER TABLE benchmark_runs ADD COLUMN tt100t_ms INTEGER;

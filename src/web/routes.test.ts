@@ -40,6 +40,7 @@ function seedData(db: Database) {
         latencyMs: 500 + i * 50,
         tokensPerSecond: 40 - i * 2,
         timeToFirstTokenMs: i % 2 === 0 ? 120 + i * 10 : null,
+        timeToFirst100TokensMs: i % 2 === 0 ? 200 + i * 20 : null,
         httpStatus: 200,
       });
     }
@@ -80,20 +81,26 @@ describe("web routes", () => {
     expect(body.stats.avgTps).toBeGreaterThan(0);
     expect(body.stats.p50TtftMs).not.toBeUndefined();
     expect(body.stats.p95TtftMs).not.toBeUndefined();
+    expect(body.stats.avgTt100tMs).not.toBeUndefined();
   });
 
-  it("data points include ttftMs field", async () => {
+  it("data points include ttftMs and tt100tMs fields", async () => {
     const res = await router(
       new Request("http://localhost/api/metrics?config=gpt-4o&hours=48"),
     );
     const body = await res.json();
     for (const dp of body.dataPoints) {
       expect("ttftMs" in dp).toBe(true);
+      expect("tt100tMs" in dp).toBe(true);
     }
     const nonNullTtft = body.dataPoints.filter(
       (dp: { ttftMs: number | null }) => dp.ttftMs !== null,
     );
+    const nonNullTt100t = body.dataPoints.filter(
+      (dp: { tt100tMs: number | null }) => dp.tt100tMs !== null,
+    );
     expect(nonNullTtft.length).toBeGreaterThan(0);
+    expect(nonNullTt100t.length).toBeGreaterThan(0);
   });
 
   it("returns 400 when config param missing from /api/metrics", async () => {
@@ -155,6 +162,7 @@ describe("web routes", () => {
     expect(body.dataPoints.length).toBe(5);
     for (const dp of body.dataPoints) {
       expect("ttftMs" in dp).toBe(true);
+      expect("tt100tMs" in dp).toBe(true);
     }
   });
 
@@ -183,5 +191,23 @@ describe("web routes", () => {
   it("returns 404 for unknown paths", async () => {
     const res = await router(new Request("http://localhost/nope"));
     expect(res.status).toBe(404);
+  });
+
+  it("legacy rows without tt100t_ms return tt100tMs: null", async () => {
+    const now = Date.now();
+    db.run(
+      `INSERT INTO benchmark_runs (config_label, model, timestamp, prompt_tokens, comp_tokens, total_tokens, latency_ms, tps, http_status, error_message, ttft_ms)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ["legacy-test", "model", new Date(now - 1000).toISOString(), 5, 10, 15, 300, 33.3, 200, null, 100],
+    );
+
+    const res = await router(
+      new Request("http://localhost/api/metrics?config=legacy-test&hours=48"),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.dataPoints.length).toBe(1);
+    expect(body.dataPoints[0].tt100tMs).toBeNull();
+    expect(body.dataPoints[0].ttftMs).toBe(100);
   });
 });
