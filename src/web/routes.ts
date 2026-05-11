@@ -15,8 +15,17 @@ export function createRouter(db: Database, _config: AppConfig) {
   return async (req: Request): Promise<Response> => {
     const url = new URL(req.url);
     const path = url.pathname;
-    console.log(`${req.method} ${path}`);
 
+    const res = await handleRoute(path, url);
+
+    if (res.status >= 400) {
+      console.error(`${req.method} ${path} -> ${res.status}`);
+    }
+
+    return res;
+  };
+
+  async function handleRoute(path: string, url: URL): Promise<Response> {
     if (path === "/api/configs") {
       const configs = getConfigsWithData(db);
       return Response.json({ configs });
@@ -70,7 +79,7 @@ export function createRouter(db: Database, _config: AppConfig) {
     }
 
     return new Response("Not Found", { status: 404 });
-  };
+  }
 
   function serveFile(filePath: string, contentType: string): Promise<Response> {
     return new Promise((resolve) => {

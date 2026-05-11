@@ -28,7 +28,7 @@ async function main() {
   });
 
   console.log(
-    `llm-monitor-web listening on http://${config.web.host}:${config.web.port}`,
+    `[${new Date().toLocaleTimeString()}] llm-monitor-web listening on http://${config.web.host}:${config.web.port}`,
   );
 
   process.on("SIGTERM", () => {
