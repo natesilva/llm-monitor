@@ -1,0 +1,94 @@
+import type { AppConfig, EndpointConfig, ResolvedEndpoint } from "./types";
+
+const DEFAULTS = {
+  promptTemplate: "Explain the water cycle in a few paragraphs.",
+  temperature: 0,
+  maxTokens: 1024,
+  timeoutMs: 30000,
+  port: 3000,
+  host: "127.0.0.1",
+  retentionDays: 30,
+  dbPath: "./data/llm-monitor.db",
+} as const;
+
+export function loadConfig(raw: AppConfig): AppConfig {
+  const config: AppConfig = {
+    bench: {
+      schedule: raw.bench.schedule,
+      endpoints: raw.bench.endpoints.map(normalizeEndpoint),
+    },
+    web: {
+      port: raw.web.port ?? DEFAULTS.port,
+      host: raw.web.host ?? DEFAULTS.host,
+    },
+    db: {
+      path: raw.db.path ?? DEFAULTS.dbPath,
+      retentionDays: raw.db.retentionDays ?? DEFAULTS.retentionDays,
+    },
+  };
+
+  validateConfig(config);
+  return config;
+}
+
+function normalizeEndpoint(ep: EndpointConfig): EndpointConfig {
+  return {
+    label: ep.label,
+    baseUrl: ep.baseUrl,
+    apiKeyEnvVar: ep.apiKeyEnvVar,
+    model: ep.model,
+    promptTemplate: ep.promptTemplate ?? DEFAULTS.promptTemplate,
+    temperature: ep.temperature ?? DEFAULTS.temperature,
+    maxTokens: ep.maxTokens ?? DEFAULTS.maxTokens,
+    timeoutMs: ep.timeoutMs ?? DEFAULTS.timeoutMs,
+    streaming: ep.streaming,
+  };
+}
+
+function validateConfig(config: AppConfig): void {
+  if (!config.bench.schedule) {
+    throw new Error("bench.schedule is required");
+  }
+
+  const labels = new Set<string>();
+  for (const ep of config.bench.endpoints) {
+    if (!ep.label) throw new Error("Each endpoint must have a label");
+    if (labels.has(ep.label)) {
+      throw new Error(`Duplicate endpoint label: ${ep.label}`);
+    }
+    labels.add(ep.label);
+
+    if (!ep.baseUrl)
+      throw new Error(`Endpoint "${ep.label}": baseUrl is required`);
+    if (!ep.model) throw new Error(`Endpoint "${ep.label}": model is required`);
+    if (!ep.apiKeyEnvVar) {
+      throw new Error(`Endpoint "${ep.label}": apiKeyEnvVar is required`);
+    }
+
+    if (
+      ep.temperature !== undefined &&
+      (ep.temperature < 0 || ep.temperature > 2)
+    ) {
+      throw new Error(`Endpoint "${ep.label}": temperature must be in [0, 2]`);
+    }
+  }
+
+  if (!config.db.path) throw new Error("db.path is required");
+  if (config.db.retentionDays !== undefined && config.db.retentionDays < 1) {
+    throw new Error("db.retentionDays must be >= 1");
+  }
+}
+
+export function resolveApiKeys(
+  endpoints: EndpointConfig[],
+): ResolvedEndpoint[] {
+  return endpoints.map((ep) => {
+    const apiKey = process.env[ep.apiKeyEnvVar]?.trim();
+    if (!apiKey) {
+      throw new Error(
+        `Environment variable "${ep.apiKeyEnvVar}" is not set or empty (required by endpoint "${ep.label}")`,
+      );
+    }
+    return { ...ep, apiKey };
+  });
+}

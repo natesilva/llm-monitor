@@ -15,6 +15,7 @@ const config: AppConfig = {
         baseUrl: "https://api.openai.com/v1",
         apiKeyEnvVar: "OPENAI_API_KEY",
         model: "gpt-4o-mini",
+        // streaming: false, // uncomment for endpoints that do not support SSE streaming
       },
     ],
   },

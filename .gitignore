@@ -4,6 +4,6 @@ data/
 .env*
 *.db
 *.log
-config.ts
+/config.ts
 .DS_Store
 .claude/worktrees
