@@ -113,19 +113,28 @@ const subcommand = process.argv[2];
 
 switch (subcommand) {
   case "register":
-    register().catch((err) => {
+    try {
+      await register();
+    } catch (err) {
       console.error("Failed to register cron job:", err);
       process.exit(1);
-    });
+    }
     break;
   case "unregister":
-    unregister();
+    try {
+      await unregister();
+    } catch (err) {
+      console.error("Failed to unregister cron job:", err);
+      process.exit(1);
+    }
     break;
   case "status":
-    status().catch((err) => {
+    try {
+      await status();
+    } catch (err) {
       console.error("Failed to check cron job status:", err);
       process.exit(1);
-    });
+    }
     break;
   default:
     printUsage();

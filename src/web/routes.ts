@@ -60,13 +60,13 @@ export function createRouter(db: Database, _config: AppConfig) {
     }
 
     if (path === "/" || path === "/index.html") {
-      return serveFile(join(staticDir, "index.html"), "text/html");
+      return await serveFile(join(staticDir, "index.html"), "text/html");
     }
 
     if (path.startsWith("/")) {
       const filePath = join(staticDir, path);
       const contentType = guessContentType(path);
-      return serveFile(filePath, contentType);
+      return await serveFile(filePath, contentType);
     }
 
     return new Response("Not Found", { status: 404 });
