@@ -7,6 +7,7 @@ export interface EndpointConfig {
   temperature?: number;
   maxTokens?: number;
   timeoutMs?: number;
+  streaming?: boolean;
 }
 
 export interface BenchConfig {
@@ -40,6 +41,7 @@ export interface BenchmarkRun {
   totalTokens: number;
   latencyMs: number;
   tokensPerSecond: number;
+  timeToFirstTokenMs: number | null;
   httpStatus: number;
   errorMessage?: string;
 }
@@ -49,6 +51,7 @@ export interface MetricsDataPoint {
   tps: number;
   latencyMs: number;
   httpStatus: number;
+  ttftMs: number | null;
 }
 
 export interface ConfigStats {
@@ -57,6 +60,8 @@ export interface ConfigStats {
   p95LatencyMs: number;
   successRate: number;
   tpsStdDev: number;
+  p50TtftMs: number | null;
+  p95TtftMs: number | null;
 }
 
 export interface MetricsResponse {

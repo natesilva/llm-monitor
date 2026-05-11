@@ -39,6 +39,7 @@ function seedData(db: Database) {
         totalTokens: 30,
         latencyMs: 500 + i * 50,
         tokensPerSecond: 40 - i * 2,
+        timeToFirstTokenMs: i % 2 === 0 ? 120 + i * 10 : null,
         httpStatus: 200,
       });
     }
@@ -77,6 +78,22 @@ describe("web routes", () => {
     expect(body.config).toBe("gpt-4o");
     expect(body.dataPoints.length).toBe(5);
     expect(body.stats.avgTps).toBeGreaterThan(0);
+    expect(body.stats.p50TtftMs).not.toBeUndefined();
+    expect(body.stats.p95TtftMs).not.toBeUndefined();
+  });
+
+  it("data points include ttftMs field", async () => {
+    const res = await router(
+      new Request("http://localhost/api/metrics?config=gpt-4o&hours=48"),
+    );
+    const body = await res.json();
+    for (const dp of body.dataPoints) {
+      expect("ttftMs" in dp).toBe(true);
+    }
+    const nonNullTtft = body.dataPoints.filter(
+      (dp: { ttftMs: number | null }) => dp.ttftMs !== null,
+    );
+    expect(nonNullTtft.length).toBeGreaterThan(0);
   });
 
   it("returns 400 when config param missing from /api/metrics", async () => {
@@ -136,6 +153,9 @@ describe("web routes", () => {
     expect(body.config).toBe("gpt-4o");
     expect(Array.isArray(body.dataPoints)).toBe(true);
     expect(body.dataPoints.length).toBe(5);
+    for (const dp of body.dataPoints) {
+      expect("ttftMs" in dp).toBe(true);
+    }
   });
 
   it("returns 400 when config param missing from /api/metrics/data-points", async () => {
