@@ -91,13 +91,13 @@ export function getComparisonMetrics(
 ): ComparisonResponse {
   const since = new Date(Date.now() - hours * 3600_000).toISOString();
 
-  let rows: { config_label: string; timestamp: string; tps: number }[];
+  let rows: { config_label: string; timestamp: string; tps: number; tt100t_ms: number | null }[];
 
   if (configs && configs.length > 0) {
     const placeholders = configs.map(() => "?").join(",");
     rows = db
       .query(
-        `SELECT config_label, timestamp, tps
+        `SELECT config_label, timestamp, tps, tt100t_ms
          FROM benchmark_runs
          WHERE timestamp >= ? AND config_label IN (${placeholders})
          ORDER BY config_label, timestamp`,
@@ -106,29 +106,37 @@ export function getComparisonMetrics(
       config_label: string;
       timestamp: string;
       tps: number;
+      tt100t_ms: number | null;
     }[];
   } else {
     rows = db
       .query(
-        `SELECT config_label, timestamp, tps
+        `SELECT config_label, timestamp, tps, tt100t_ms
          FROM benchmark_runs
          WHERE timestamp >= ?
          ORDER BY config_label, timestamp`,
       )
-      .all(since) as { config_label: string; timestamp: string; tps: number }[];
+      .all(since) as { config_label: string; timestamp: string; tps: number; tt100t_ms: number | null }[];
   }
 
-  const grouped = new Map<string, { timestamp: string; tps: number }[]>();
+  const grouped = new Map<string, { timestamp: string; tps: number; tt100t_ms: number | null }[]>();
   for (const row of rows) {
     if (!grouped.has(row.config_label)) grouped.set(row.config_label, []);
     grouped
       .get(row.config_label)
-      ?.push({ timestamp: row.timestamp, tps: row.tps });
+      ?.push({ timestamp: row.timestamp, tps: row.tps, tt100t_ms: row.tt100t_ms });
   }
 
   const series: ComparisonSeries[] = [];
   for (const [config, points] of grouped) {
-    series.push({ config, dataPoints: points });
+    series.push({
+      config,
+      dataPoints: points.map((p) => ({
+        timestamp: p.timestamp,
+        tps: p.tps,
+        tt100tMs: p.tt100t_ms,
+      })),
+    });
   }
 
   return { hours, series };

@@ -77,6 +77,7 @@ export interface MetricsResponse {
 export interface ComparisonDataPoint {
   timestamp: string;
   tps: number;
+  tt100tMs: number | null;
 }
 
 export interface ComparisonSeries {

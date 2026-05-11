@@ -123,7 +123,7 @@ describe("web routes", () => {
     expect(labels).toContain("gpt-4o-mini");
   });
 
-  it("comparison series data points have timestamp and tps for time scale", async () => {
+  it("comparison series data points include timestamp, tps, and tt100tMs", async () => {
     const res = await router(
       new Request(
         "http://localhost/api/metrics/compare?hours=24&configs=gpt-4o",
@@ -136,6 +136,7 @@ describe("web routes", () => {
     for (const dp of series.dataPoints) {
       expect(typeof dp.timestamp).toBe("string");
       expect(typeof dp.tps).toBe("number");
+      expect("tt100tMs" in dp).toBe(true);
       expect(new Date(dp.timestamp).getTime()).not.toBeNaN();
     }
   });
