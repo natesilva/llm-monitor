@@ -97,11 +97,11 @@
                 font-size: 0.9rem;
             }
             .comparison-note {
-                text-align: center;
                 font-size: 0.75rem;
                 color: var(--fg-muted);
                 font-style: italic;
-                margin-top: 4px;
+                margin-left: 8px;
+                font-weight: normal;
             }
             #toggles {
                 display: flex;
@@ -310,7 +310,7 @@
         </div>
 
         <section id="comparison-section">
-            <h2 class="section-title">Comparison (24h)</h2>
+            <h2 class="section-title">Comparison (24h) <span class="comparison-note">lower is better</span></h2>
             <div id="toggles"></div>
             <div id="comparison-container">
                 <canvas id="comparison-chart"></canvas>
@@ -318,7 +318,7 @@
                     Select configurations to compare
                 </div>
             </div>
-            <p class="comparison-note">lower is better</p>
+
         </section>
 
         <section>
