@@ -179,6 +179,13 @@ export function getDataPointsForConfig(
   return { config: configLabel, hours, dataPoints };
 }
 
+export function getLatestTimestamp(db: Database): string | null {
+  const row = db
+    .query("SELECT MAX(timestamp) as latest FROM benchmark_runs")
+    .get() as { latest: string | null } | null;
+  return row?.latest ?? null;
+}
+
 export function pruneOldRuns(db: Database, retentionDays: number): number {
   const cutoff = new Date(Date.now() - retentionDays * 86400_000).toISOString();
   const result = db.run("DELETE FROM benchmark_runs WHERE timestamp < ?", [

@@ -4,6 +4,7 @@ import {
   getComparisonMetrics,
   getConfigsWithData,
   getDataPointsForConfig,
+  getLatestTimestamp,
   getMetricsForConfig,
 } from "../db/queries";
 import type { Database } from "../db/schema";
@@ -52,6 +53,11 @@ export function createRouter(db: Database, _config: AppConfig) {
         : undefined;
       const result = getComparisonMetrics(db, hours, configs);
       return Response.json(result);
+    }
+
+    if (path === "/api/latest-data") {
+      const latestTimestamp = getLatestTimestamp(db);
+      return Response.json({ latestTimestamp });
     }
 
     if (path === "/api/metrics/data-points") {

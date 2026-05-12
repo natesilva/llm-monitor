@@ -127,8 +127,12 @@ async function refresh() {
   await renderToggles();
   await renderTiles();
   await renderComparison();
+  const latestData = await fetchJSON("/api/latest-data");
+  const latestStr = latestData.latestTimestamp
+    ? `Latest data: ${new Date(latestData.latestTimestamp).toLocaleTimeString()}`
+    : "Latest data: No data yet";
   document.getElementById("last-refresh").textContent =
-    `Last updated: ${new Date().toLocaleTimeString()}`;
+    `Page refreshed: ${new Date().toLocaleTimeString()} / ${latestStr}`;
 }
 
 async function renderToggles() {
