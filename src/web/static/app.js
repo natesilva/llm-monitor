@@ -415,7 +415,7 @@ async function renderComparison() {
             grid: { color: grid },
           },
           y: {
-            title: { display: true, text: "TT100T (ms)", color: yTitle },
+            title: { display: true, text: "Time to first 100 tokens (ms)", color: yTitle },
             ticks: { color: tick },
             grid: { color: grid },
           },
