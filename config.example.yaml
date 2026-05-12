@@ -1,0 +1,32 @@
+# LLM Monitor Configuration
+# Copy this file to config.yaml and update values as needed.
+
+bench:
+  # Cron schedule for benchmark runs (standard cron expression)
+  schedule: "0 * * * *"
+
+  endpoints:
+    - label: "OpenAI GPT-5.5"
+      baseUrl: "https://api.openai.com/v1"
+      # Name of the environment variable holding the API key
+      apiKeyEnvVar: "OPENAI_API_KEY"
+      model: "gpt-5.5"
+      # promptTemplate: "Explain the water cycle in a few paragraphs."  # default shown
+      # temperature: 0      # 0-2, default: 0
+      # maxTokens: 1024     # default: 1024
+      # timeoutMs: 30000   # default: 30000
+      # streaming: true     # omit or set to true for SSE streaming; set false to disable
+
+    - label: "OpenAI GPT-5.4 Mini"
+      baseUrl: "https://api.openai.com/v1"
+      apiKeyEnvVar: "OPENAI_API_KEY"
+      model: "gpt-5.4-mini"
+      # streaming: false    # uncomment for endpoints that do not support SSE streaming
+
+web:
+  port: 3000 # default: 3000
+  host: "127.0.0.1" # default: 127.0.0.1
+
+db:
+  path: "./data/llm-monitor.db" # default: ./data/llm-monitor.db
+  retentionDays: 30 # default: 30, must be >= 1

@@ -11,19 +11,45 @@ const DEFAULTS = {
   dbPath: "./data/llm-monitor.db",
 } as const;
 
-export function loadConfig(raw: AppConfig): AppConfig {
+const CONFIG_PATH = process.env.CONFIG_PATH ?? "config.yaml";
+
+export async function loadConfigFromYaml(): Promise<AppConfig> {
+  const file = Bun.file(CONFIG_PATH);
+  if (!(await file.exists())) {
+    throw new Error(
+      `Configuration file not found: ${CONFIG_PATH}. Copy config.example.yaml to config.yaml and edit it.`,
+    );
+  }
+
+  let text: string;
+  try {
+    text = await file.text();
+  } catch (err) {
+    throw new Error(`Failed to read configuration file ${CONFIG_PATH}: ${err}`);
+  }
+
+  let raw: unknown;
+  try {
+    raw = Bun.YAML.parse(text);
+  } catch (err) {
+    throw new Error(
+      `Failed to parse YAML in ${CONFIG_PATH}: ${err instanceof Error ? err.message : err}`,
+    );
+  }
+
   const config: AppConfig = {
     bench: {
-      schedule: raw.bench.schedule,
-      endpoints: raw.bench.endpoints.map(normalizeEndpoint),
+      schedule: (raw as AppConfig).bench.schedule,
+      endpoints: (raw as AppConfig).bench.endpoints.map(normalizeEndpoint),
     },
     web: {
-      port: raw.web.port ?? DEFAULTS.port,
-      host: raw.web.host ?? DEFAULTS.host,
+      port: (raw as AppConfig).web.port ?? DEFAULTS.port,
+      host: (raw as AppConfig).web.host ?? DEFAULTS.host,
     },
     db: {
-      path: raw.db.path ?? DEFAULTS.dbPath,
-      retentionDays: raw.db.retentionDays ?? DEFAULTS.retentionDays,
+      path: (raw as AppConfig).db.path ?? DEFAULTS.dbPath,
+      retentionDays:
+        (raw as AppConfig).db.retentionDays ?? DEFAULTS.retentionDays,
     },
   };
 

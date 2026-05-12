@@ -1,20 +1,10 @@
 import { pruneOldRuns } from "../db/queries";
 import { initDb } from "../db/schema";
-import { loadConfig } from "../shared/config";
+import { loadConfigFromYaml } from "../shared/config";
 import { createRouter } from "./routes";
 
 async function main() {
-  let rawConfig: { default: import("../shared/types").AppConfig };
-  try {
-    // @ts-expect-error - config.ts is created by the user from config.example.ts
-    rawConfig = await import("../../config.ts");
-  } catch {
-    console.error(
-      "Error: config.ts not found. Copy config.example.ts to config.ts and edit it.",
-    );
-    process.exit(1);
-  }
-  const config = loadConfig(rawConfig.default);
+  const config = await loadConfigFromYaml();
   const db = initDb(config.db.path);
 
   pruneOldRuns(db, config.db.retentionDays);

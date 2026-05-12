@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { loadConfig } from "../shared/config";
+import { loadConfigFromYaml } from "../shared/config";
 
 const CRON_JOB_NAME = "LLM_Monitor_Bench";
 
@@ -35,24 +35,10 @@ async function isCronJobRegistered(name: string): Promise<boolean> {
   return false;
 }
 
-async function loadRawConfig() {
-  let rawConfig: { default: import("../shared/types").AppConfig };
-  try {
-    // @ts-expect-error - config.ts is created by the user from config.example.ts
-    rawConfig = await import("../../config.ts");
-  } catch {
-    console.error(
-      "Error: config.ts not found. Copy config.example.ts to config.ts and edit it.",
-    );
-    process.exit(1);
-  }
-  return loadConfig(rawConfig.default);
-}
-
 async function register() {
   const alreadyRegistered = await isCronJobRegistered(CRON_JOB_NAME);
 
-  const config = await loadRawConfig();
+  const config = await loadConfigFromYaml();
   const workerPath = join(import.meta.dir, "cron-worker.ts");
 
   await Bun.cron(workerPath, config.bench.schedule, CRON_JOB_NAME);
@@ -89,7 +75,7 @@ async function status() {
     return;
   }
 
-  const config = await loadRawConfig();
+  const config = await loadConfigFromYaml();
   const workerPath = join(import.meta.dir, "cron-worker.ts");
 
   console.log("Cron job is registered.");

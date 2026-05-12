@@ -1,15 +1,19 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 0.0.0 (template) → 1.0.0 (initial fill) → 1.1.0 (architecture update)
+  Version change: 0.0.0 (template) → 1.0.0 (initial fill) → 1.1.0 (architecture update) → 1.2.0 (configuration update)
   v1.0.0: Initial fill of all template placeholders
   v1.1.0: Updated Process Topology — bench process changed from long-running
     daemon to one-shot runner invoked by OS-level cron (via Bun.cron()).
     Rationale: User requested no long-running bench daemon; OS-level cron
     is simpler and more robust.
+  v1.2.0: Updated Configuration — replaced executable config.ts with declarative
+    config.yaml. Rationale: Declarative YAML config eliminates arbitrary code
+    execution risk at load time and separates configuration from code.
   Modified principles: N/A (principles unchanged)
   Modified sections:
     - Architecture & Deployment > Process Topology
+    - Architecture & Deployment > Configuration
   Templates requiring updates:
     - .specify/templates/plan-template.md ✅ no changes needed
     - .specify/templates/spec-template.md ✅ no changes needed
@@ -78,9 +82,11 @@ with clear startup/shutdown semantics.
 
 ### Configuration
 
-Configuration MUST be via environment variables with a `.env` file as default.
-Minimum config: list of endpoint definitions (base URL, model, API key),
-schedule interval, database path, and HTTP listen address/port.
+Configuration MUST be via a YAML configuration file. Sensitive values (API keys)
+MUST be referenced by environment variable name in the YAML file and resolved at
+runtime. A `.env` file may be used to set those environment variables during
+development. Minimum config: list of endpoint definitions (base URL, model,
+apiKeyEnvVar), schedule interval, database path, and HTTP listen address/port.
 
 ## Development Workflow
 
@@ -131,4 +137,4 @@ the principles herein.
 - Implementation plans MUST justify any complexity that appears to violate
   the Minimal & Composable principle.
 
-**Version**: 1.1.0 | **Ratified**: 2026-05-08 | **Last Amended**: 2026-05-08
+**Version**: 1.2.0 | **Ratified**: 2026-05-08 | **Last Amended**: 2026-05-12

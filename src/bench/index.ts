@@ -1,22 +1,12 @@
 import { parseArgs } from "node:util";
 import { pruneOldRuns } from "../db/queries";
 import { initDb } from "../db/schema";
-import { loadConfig } from "../shared/config";
+import { loadConfigFromYaml } from "../shared/config";
 import { loadEndpoints } from "./config";
 import { runAllEndpoints } from "./scheduler";
 
 export async function runBench(debug = false, prompt?: string) {
-  let rawConfig: { default: import("../shared/types").AppConfig };
-  try {
-    // @ts-expect-error - config.ts is created by the user from config.example.ts
-    rawConfig = await import("../../config.ts");
-  } catch {
-    console.error(
-      "Error: config.ts not found. Copy config.example.ts to config.ts and edit it.",
-    );
-    process.exit(1);
-  }
-  const config = loadConfig(rawConfig.default);
+  const config = await loadConfigFromYaml();
   const db = initDb(config.db.path);
 
   const endpoints = loadEndpoints(config.bench.endpoints);
