@@ -1,20 +1,29 @@
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import dotenv from "dotenv";
+import { loadConfigFromYaml } from "../shared/config";
+import { createCronLogger } from "./cron-logger";
 import { runBench } from "./index";
 
-const PROJECT_ROOT = join(import.meta.dir, "..", "..");
+const PROJECT_ROOT = resolve(import.meta.dir, "..", "..");
 
 dotenv.config({ path: join(PROJECT_ROOT, ".env") });
 
 export default {
   async scheduled(controller: Bun.CronController) {
-    console.log(
-      `[cron] Scheduled run at ${new Date(controller.scheduledTime).toISOString()}`,
-    );
+    const config = await loadConfigFromYaml();
+    const logger = createCronLogger(config.bench.logFile);
+
+    const msg = `[cron] Scheduled run at ${new Date(controller.scheduledTime).toISOString()}`;
+    console.log(msg);
+    logger.write(msg);
+
     try {
-      await runBench();
+      await runBench(config.bench.debug ?? false);
+      logger.write("[cron] Benchmark run complete");
     } catch (err) {
-      console.error("[cron] Benchmark run failed:", err);
+      const errMsg = `[cron] Benchmark run failed: ${err instanceof Error ? err.message : err}`;
+      console.error(errMsg);
+      logger.write(errMsg);
     }
   },
 };

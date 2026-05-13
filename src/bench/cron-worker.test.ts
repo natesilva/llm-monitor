@@ -2,10 +2,34 @@ import { describe, expect, it, mock } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const runBenchMock = mock(() => Promise.resolve());
+const runBenchMock = mock((_debug?: boolean) => Promise.resolve());
 
 mock.module("./index", () => ({
   runBench: runBenchMock,
+}));
+
+const loadConfigMock = mock(() =>
+  Promise.resolve({
+    bench: {
+      schedule: "0 * * * *",
+      endpoints: [],
+      debug: true,
+      logFile: "data/cron.log",
+    },
+    web: { port: 3000, host: "127.0.0.1" },
+    db: { path: "./data/llm-monitor.db", retentionDays: 30 },
+  }),
+);
+
+mock.module("../shared/config", () => ({
+  loadConfigFromYaml: loadConfigMock,
+}));
+
+mock.module("./cron-logger", () => ({
+  createCronLogger: () => ({
+    write: mock(() => {}),
+    logFilePath: "data/cron.log",
+  }),
 }));
 
 describe("cron-worker", () => {
@@ -16,25 +40,21 @@ describe("cron-worker", () => {
     expect(typeof def.scheduled).toBe("function");
   });
 
-  it("scheduled() calls runBench()", () => {
-    const worker: {
-      default: { scheduled: (ctrl: Bun.CronController) => void };
-    } = {
-      default: {
-        scheduled(_controller) {
-          runBenchMock();
-        },
-      },
-    };
+  it("scheduled() loads config and passes bench.debug to runBench", async () => {
+    runBenchMock.mockClear();
+    loadConfigMock.mockClear();
 
+    const worker = await import("./cron-worker");
     const controller: Bun.CronController = {
       type: "scheduled",
       cron: "0 * * * *",
       scheduledTime: Date.now(),
     };
 
-    worker.default.scheduled(controller);
-    expect(runBenchMock).toHaveBeenCalled();
+    await worker.default.scheduled(controller);
+
+    expect(loadConfigMock).toHaveBeenCalled();
+    expect(runBenchMock).toHaveBeenCalledWith(true);
   });
 
   it("loads dotenv with project-root-relative .env path", () => {
@@ -42,5 +62,10 @@ describe("cron-worker", () => {
     expect(src).toContain("dotenv.config");
     expect(src).toContain("PROJECT_ROOT");
     expect(src).toMatch(/join\(import\.meta\.dir,\s*"..",\s*".."\)/);
+  });
+
+  it("reads bench.debug from config source", () => {
+    const src = readFileSync(join(import.meta.dir, "cron-worker.ts"), "utf-8");
+    expect(src).toContain("config.bench.debug");
   });
 });

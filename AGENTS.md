@@ -1,4 +1,8 @@
 
+## Cron Job CWD
+
+The bench cron job (registered via `Bun.cron`) does **NOT** run with the project directory as its working directory. On macOS it runs via launchd with CWD `/`, on Linux via crontab with CWD as the user's home directory. **ALL file paths in cron-worker code MUST be resolved relative to the project root using `import.meta.dir`**, not `process.cwd()` or relative paths.
+
 ## Git
 
 - Use Conventional Commits format for all commit messages (`type(scope): description`).

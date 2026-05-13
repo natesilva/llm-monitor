@@ -13,6 +13,8 @@ export interface EndpointConfig {
 export interface BenchConfig {
   schedule: string;
   endpoints: EndpointConfig[];
+  debug?: boolean;
+  logFile?: string;
 }
 
 export interface WebConfig {

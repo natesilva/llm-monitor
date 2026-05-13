@@ -1,3 +1,4 @@
+import { resolve, join } from "node:path";
 import type { AppConfig, EndpointConfig, ResolvedEndpoint } from "./types";
 
 const DEFAULTS = {
@@ -11,29 +12,17 @@ const DEFAULTS = {
   dbPath: "./data/llm-monitor.db",
 } as const;
 
-const CONFIG_PATH = process.env.CONFIG_PATH ?? "config.yaml";
+const PROJECT_ROOT = resolve(import.meta.dir, "..", "..");
+const CONFIG_PATH = resolve(PROJECT_ROOT, process.env.CONFIG_PATH ?? "config.yaml");
 
 export async function loadConfigFromYaml(): Promise<AppConfig> {
-  const file = Bun.file(CONFIG_PATH);
-  if (!(await file.exists())) {
-    throw new Error(
-      `Configuration file not found: ${CONFIG_PATH}. Copy config.example.yaml to config.yaml and edit it.`,
-    );
-  }
-
-  let text: string;
-  try {
-    text = await file.text();
-  } catch (err) {
-    throw new Error(`Failed to read configuration file ${CONFIG_PATH}: ${err}`);
-  }
-
   let raw: unknown;
   try {
-    raw = Bun.YAML.parse(text);
+    const mod = await import(CONFIG_PATH);
+    raw = mod.default;
   } catch (err) {
     throw new Error(
-      `Failed to parse YAML in ${CONFIG_PATH}: ${err instanceof Error ? err.message : err}`,
+      `Failed to load configuration file ${CONFIG_PATH}: ${err instanceof Error ? err.message : err}. Copy config.example.yaml to config.yaml and edit it.`,
     );
   }
 
@@ -41,6 +30,8 @@ export async function loadConfigFromYaml(): Promise<AppConfig> {
     bench: {
       schedule: (raw as AppConfig).bench.schedule,
       endpoints: (raw as AppConfig).bench.endpoints.map(normalizeEndpoint),
+      debug: (raw as AppConfig).bench.debug ?? false,
+      logFile: (raw as AppConfig).bench.logFile,
     },
     web: {
       port: (raw as AppConfig).web.port ?? DEFAULTS.port,

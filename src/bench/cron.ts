@@ -1,5 +1,7 @@
 import { join } from "node:path";
 import { loadConfigFromYaml } from "../shared/config";
+import { createCronLogger } from "./cron-logger";
+import { runBench } from "./index";
 
 const CRON_JOB_NAME = "LLM_Monitor_Bench";
 
@@ -84,6 +86,26 @@ async function status() {
   console.log(`  Worker:   ${workerPath}`);
 }
 
+async function run() {
+  const config = await loadConfigFromYaml();
+  const logger = createCronLogger(config.bench.logFile);
+  const debug = config.bench.debug ?? false;
+
+  console.log(`Running benchmark (debug: ${debug})...`);
+  console.log(`  Log file: ${logger.logFilePath}`);
+
+  try {
+    await runBench(debug);
+    logger.write("[cron run] Benchmark run complete");
+    console.log("Benchmark run complete.");
+  } catch (err) {
+    const errMsg = `[cron run] Benchmark run failed: ${err instanceof Error ? err.message : err}`;
+    console.error(errMsg);
+    logger.write(errMsg);
+    process.exit(1);
+  }
+}
+
 function printUsage() {
   console.log("Usage: bun run cron <subcommand>");
   console.log();
@@ -93,6 +115,9 @@ function printUsage() {
   );
   console.log("  unregister  Remove the scheduled benchmark cron job");
   console.log("  status      Check whether the cron job is registered");
+  console.log(
+    "  run         Manually run the benchmark via the cron worker path",
+  );
 }
 
 const subcommand = process.argv[2];
@@ -119,6 +144,14 @@ switch (subcommand) {
       await status();
     } catch (err) {
       console.error("Failed to check cron job status:", err);
+      process.exit(1);
+    }
+    break;
+  case "run":
+    try {
+      await run();
+    } catch (err) {
+      console.error("Failed to run benchmark:", err);
       process.exit(1);
     }
     break;

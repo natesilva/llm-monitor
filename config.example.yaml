@@ -5,6 +5,12 @@ bench:
   # Cron schedule for benchmark runs (standard cron expression)
   schedule: "0 * * * *"
 
+  # Enable debug logging for cron runs (prints request/response details)
+  # debug: false
+
+  # Path for cron execution log file (default: data/cron.log)
+  # logFile: "data/cron.log"
+
   endpoints:
     - label: "OpenAI GPT-5.5"
       baseUrl: "https://api.openai.com/v1"
