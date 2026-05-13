@@ -1,7 +1,7 @@
 export interface EndpointConfig {
   label: string;
   baseUrl: string;
-  apiKeyEnvVar: string;
+  apiKeyEnvVar?: string;
   model: string;
   promptTemplate?: string;
   temperature?: number;
@@ -102,5 +102,5 @@ export interface DataPointsResponse {
 }
 
 export interface ResolvedEndpoint extends EndpointConfig {
-  apiKey: string;
+  apiKey?: string;
 }

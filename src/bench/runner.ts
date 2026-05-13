@@ -73,7 +73,9 @@ async function runStreamingEndpoint(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${endpoint.apiKey}`,
+        ...(endpoint.apiKey
+          ? { Authorization: `Bearer ${endpoint.apiKey}` }
+          : {}),
       },
       body: JSON.stringify(body),
       signal: controller.signal,
@@ -284,7 +286,9 @@ async function runNonStreamingEndpoint(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${endpoint.apiKey}`,
+        ...(endpoint.apiKey
+          ? { Authorization: `Bearer ${endpoint.apiKey}` }
+          : {}),
       },
       body: JSON.stringify(body),
       signal: controller.signal,

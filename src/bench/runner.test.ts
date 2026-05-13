@@ -303,4 +303,31 @@ describe("runner integration tests (fetch mocked)", () => {
     expect(row.ttft_ms).toBeNull();
     expect(row.http_status).toBe(200);
   });
+
+  it("unauthenticated endpoint sends no Authorization header", async () => {
+    let capturedHeaders: HeadersInit | undefined;
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      capturedHeaders = init?.headers;
+      return Promise.resolve(
+        sseResponse([
+          { choices: [{ delta: { content: "Hi" } }] },
+          {
+            choices: [{ delta: {} }],
+            usage: { prompt_tokens: 2, completion_tokens: 10, total_tokens: 12 },
+          },
+        ]),
+      );
+    }) as unknown as typeof fetch;
+
+    await runEndpoint(
+      db,
+      makeEndpoint({ apiKeyEnvVar: undefined, apiKey: undefined }),
+      false,
+    );
+
+    const headers = capturedHeaders as Record<string, string>;
+    expect(headers["Content-Type"]).toBe("application/json");
+    expect(headers).not.toHaveProperty("Authorization");
+    expect(headers).not.toHaveProperty("authorization");
+  });
 });

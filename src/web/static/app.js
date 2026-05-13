@@ -505,9 +505,10 @@ async function renderComparison() {
               label(ctx) {
                 if (ctx.dataset.label.endsWith(" errors")) {
                   const raw = ctx.raw;
+                  const configLabel = ctx.dataset.label.slice(0, -" errors".length);
                   return raw.errorMessage
-                    ? `Error: ${raw.errorMessage}`
-                    : `HTTP ${raw.httpStatus}`;
+                    ? `${configLabel}: Error: ${raw.errorMessage}`
+                    : `${configLabel}: HTTP ${raw.httpStatus}`;
                 }
                 return `${ctx.dataset.label}: ${ctx.parsed.y}ms`;
               },

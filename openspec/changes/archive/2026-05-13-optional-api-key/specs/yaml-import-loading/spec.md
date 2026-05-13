@@ -1,3 +1,5 @@
+## MODIFIED Requirements
+
 ### Requirement: Config loaded via native YAML import
 The system SHALL load the YAML configuration file using a dynamic `import()` instead of `Bun.YAML.parse()`. The `import()` call returns the parsed YAML object directly as its default export. Endpoints MAY omit `apiKeyEnvVar`; when present, it references an environment variable holding a Bearer token.
 

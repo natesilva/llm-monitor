@@ -52,7 +52,7 @@ function normalizeEndpoint(ep: EndpointConfig): EndpointConfig {
   return {
     label: ep.label,
     baseUrl: ep.baseUrl,
-    apiKeyEnvVar: ep.apiKeyEnvVar,
+    apiKeyEnvVar: ep.apiKeyEnvVar ?? undefined,
     model: ep.model,
     promptTemplate: ep.promptTemplate ?? DEFAULTS.promptTemplate,
     temperature: ep.temperature ?? DEFAULTS.temperature,
@@ -62,7 +62,7 @@ function normalizeEndpoint(ep: EndpointConfig): EndpointConfig {
   };
 }
 
-function validateConfig(config: AppConfig): void {
+export function validateConfig(config: AppConfig): void {
   if (!config.bench.schedule) {
     throw new Error("bench.schedule is required");
   }
@@ -78,9 +78,6 @@ function validateConfig(config: AppConfig): void {
     if (!ep.baseUrl)
       throw new Error(`Endpoint "${ep.label}": baseUrl is required`);
     if (!ep.model) throw new Error(`Endpoint "${ep.label}": model is required`);
-    if (!ep.apiKeyEnvVar) {
-      throw new Error(`Endpoint "${ep.label}": apiKeyEnvVar is required`);
-    }
 
     if (
       ep.temperature !== undefined &&
@@ -100,6 +97,9 @@ export function resolveApiKeys(
   endpoints: EndpointConfig[],
 ): ResolvedEndpoint[] {
   return endpoints.map((ep) => {
+    if (!ep.apiKeyEnvVar) {
+      return { ...ep, apiKey: undefined };
+    }
     const apiKey = process.env[ep.apiKeyEnvVar]?.trim();
     if (!apiKey) {
       throw new Error(

@@ -14,7 +14,7 @@ bench:
   endpoints:
     - label: "OpenAI GPT-5.5"
       baseUrl: "https://api.openai.com/v1"
-      # Name of the environment variable holding the API key
+      # Name of the environment variable holding the API key (omit for unauthenticated endpoints)
       apiKeyEnvVar: "OPENAI_API_KEY"
       model: "gpt-5.5"
       # promptTemplate: "Explain the water cycle in a few paragraphs."  # default shown
@@ -28,6 +28,12 @@ bench:
       apiKeyEnvVar: "OPENAI_API_KEY"
       model: "gpt-5.4-mini"
       # streaming: false    # uncomment for endpoints that do not support SSE streaming
+
+    # Example: unauthenticated local endpoint (e.g., Ollama, vLLM)
+    # - label: "Local Llama"
+    #   baseUrl: "http://localhost:11434/v1"
+    #   model: "llama3"
+    #   # No apiKeyEnvVar needed — requests are sent without Authorization header
 
 web:
   port: 3000 # default: 3000
