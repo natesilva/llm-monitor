@@ -10,8 +10,9 @@ import {
 import type { Database } from "../db/schema";
 import type { AppConfig } from "../shared/types";
 
-export function createRouter(db: Database, _config: AppConfig) {
+export function createRouter(db: Database, config: AppConfig) {
   const staticDir = join(import.meta.dir, "static");
+  const activeLabels = config.bench.endpoints.map((e) => e.label);
 
   return async (req: Request): Promise<Response> => {
     const url = new URL(req.url);
@@ -28,7 +29,7 @@ export function createRouter(db: Database, _config: AppConfig) {
 
   async function handleRoute(path: string, url: URL): Promise<Response> {
     if (path === "/api/configs") {
-      const configs = getConfigsWithData(db);
+      const configs = getConfigsWithData(db, activeLabels);
       return Response.json({ configs });
     }
 

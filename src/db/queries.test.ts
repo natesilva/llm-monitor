@@ -2,7 +2,7 @@ import type Database from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { insertRun, getMetricsForConfig } from "./queries";
+import { insertRun, getMetricsForConfig, getConfigsWithData } from "./queries";
 import { initDb } from "./schema";
 
 const TMP_DIR = join(import.meta.dir, "../../__test_tmp_queries__");
@@ -180,5 +180,80 @@ describe("computeStats via getMetricsForConfig", () => {
     const tt100tValues = result.dataPoints.map((dp) => dp.tt100tMs);
     expect(tt100tValues).toContain(1500);
     expect(tt100tValues).toContain(null);
+  });
+});
+
+describe("getConfigsWithData", () => {
+  let db: Database;
+
+  beforeEach(() => {
+    db = makeDb();
+  });
+
+  afterEach(() => {
+    db.close();
+    rmSync(TMP_DIR, { recursive: true, force: true });
+  });
+
+  it("includes active labels even when they have no DB data", () => {
+    const result = getConfigsWithData(db, ["Alpha", "Beta"]);
+    expect(result).toContain("Alpha");
+    expect(result).toContain("Beta");
+  });
+
+  it("includes active labels that also have DB data", () => {
+    const now = Date.now();
+    insertRun(db, baseRun({
+      configLabel: "Active",
+      timestamp: new Date(now - 6000).toISOString(),
+    }));
+    const result = getConfigsWithData(db, ["Active"]);
+    expect(result).toContain("Active");
+  });
+
+  it("includes removed config with recent data (within 12h)", () => {
+    const now = Date.now();
+    insertRun(db, baseRun({
+      configLabel: "Removed-Recent",
+      timestamp: new Date(now - 6 * 3600_000).toISOString(),
+    }));
+    const result = getConfigsWithData(db, []);
+    expect(result).toContain("Removed-Recent");
+  });
+
+  it("excludes removed config with stale data (older than 12h)", () => {
+    const now = Date.now();
+    insertRun(db, baseRun({
+      configLabel: "Removed-Stale",
+      timestamp: new Date(now - 13 * 3600_000).toISOString(),
+    }));
+    const result = getConfigsWithData(db, []);
+    expect(result).not.toContain("Removed-Stale");
+  });
+
+  it("excludes removed config with no data", () => {
+    const result = getConfigsWithData(db, []);
+    expect(result).not.toContain("Phantom");
+  });
+
+  it("returns configs in alphabetical order with mixed active/removed", () => {
+    const now = Date.now();
+    insertRun(db, baseRun({
+      configLabel: "Alpha",
+      timestamp: new Date(now - 1000).toISOString(),
+    }));
+    const result = getConfigsWithData(db, ["Beta", "Delta"]);
+    expect(result).toEqual(["Alpha", "Beta", "Delta"]);
+  });
+
+  it("does not duplicate active labels that also appear in recent DB data", () => {
+    const now = Date.now();
+    insertRun(db, baseRun({
+      configLabel: "Active",
+      timestamp: new Date(now - 1000).toISOString(),
+    }));
+    const result = getConfigsWithData(db, ["Active"]);
+    const count = result.filter((l) => l === "Active").length;
+    expect(count).toBe(1);
   });
 });

@@ -30,13 +30,30 @@ export function insertRun(db: Database, run: Omit<BenchmarkRun, "id">): void {
   );
 }
 
-export function getConfigsWithData(db: Database): string[] {
-  const rows = db
+const RECENT_CONFIG_HOURS = 12;
+
+export function getConfigsWithData(
+  db: Database,
+  activeLabels: string[] = [],
+): string[] {
+  const since = new Date(
+    Date.now() - RECENT_CONFIG_HOURS * 3600_000,
+  ).toISOString();
+
+  const recentRows = db
     .query(
-      "SELECT DISTINCT config_label FROM benchmark_runs ORDER BY config_label",
+      "SELECT DISTINCT config_label FROM benchmark_runs WHERE timestamp >= ?",
     )
-    .all() as { config_label: string }[];
-  return rows.map((r) => r.config_label);
+    .all(since) as { config_label: string }[];
+
+  const activeSet = new Set(activeLabels);
+  const recentLabels = recentRows
+    .map((r) => r.config_label)
+    .filter((label) => !activeSet.has(label));
+
+  const merged = [...activeLabels, ...recentLabels];
+  merged.sort();
+  return merged;
 }
 
 export function getMetricsForConfig(
