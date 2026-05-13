@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Latest data timestamp display
 The dashboard SHALL display a "Latest data" indicator next to the existing "Last updated" indicator in the header, showing the timestamp of the most recent benchmark run. The data overlay table SHALL include an "Error" column showing the `errorMessage` field from `MetricsDataPoint`.

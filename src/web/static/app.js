@@ -215,6 +215,7 @@ async function renderTiles() {
           <div class="stat"><div class="stat-value">${metrics.stats.avgTps}</div><div class="stat-label">Avg TPS</div></div>
           <div class="stat"><div class="stat-value">${metrics.stats.avgTt100tMs !== null ? `${metrics.stats.avgTt100tMs}ms` : "N/A"}</div><div class="stat-label">Avg TT100T</div></div>
           <div class="stat"><div class="stat-value">${metrics.stats.tpsStdDev}</div><div class="stat-label">TPS StdDev</div></div>
+          <div class="stat"><div class="stat-value">${(metrics.stats.successRate * 100).toFixed(1)}%</div><div class="stat-label">Success Rate</div></div>
         </div>
       `;
     }
@@ -256,6 +257,10 @@ function createTileChart(canvas, metrics, color) {
   const tick = style.getPropertyValue("--tick").trim();
   const grid = style.getPropertyValue("--grid").trim();
 
+  const hasErrors = metrics.dataPoints.some(
+    (d) => d.httpStatus < 200 || d.httpStatus >= 300,
+  );
+
   const chart = new Chart(canvas, {
     type: "line",
     data: {
@@ -276,7 +281,42 @@ function createTileChart(canvas, metrics, color) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: {
+          display: hasErrors,
+          position: "bottom",
+          labels: {
+            usePointStyle: true,
+            pointStyle: "circle",
+            generateLabels() {
+              return [
+                {
+                  text: "Error",
+                  fillStyle: "#ef4444",
+                  strokeStyle: "#ef4444",
+                  pointStyle: "circle",
+                  hidden: false,
+                  index: 0,
+                },
+              ];
+            },
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label(ctx) {
+              const dp = ctx.chart._dataPoints?.[ctx.dataIndex];
+              if (!dp) return `TPS: ${ctx.parsed.y}`;
+              if (dp.httpStatus >= 200 && dp.httpStatus < 300) {
+                return `TPS: ${ctx.parsed.y}`;
+              }
+              return dp.errorMessage
+                ? `Error: ${dp.errorMessage}`
+                : `HTTP ${dp.httpStatus}`;
+            },
+          },
+        },
+      },
       scales: {
         x: {
           display: true,
@@ -293,6 +333,7 @@ function createTileChart(canvas, metrics, color) {
   });
 
   tileCharts[metrics.config] = chart;
+  chart._dataPoints = metrics.dataPoints;
 }
 
 function updateTileChart(cfg, metrics) {
@@ -322,16 +363,18 @@ function updateTileChart(cfg, metrics) {
   chart.data.labels = labels;
   chart.data.datasets[0].data = metrics.dataPoints.map((d) => d.tps);
   chart.data.datasets[0].pointBackgroundColor = pointColors;
+  chart._dataPoints = metrics.dataPoints;
   chart.update("none");
 
   const statsEl = tile.querySelector(".tile-stats");
   if (statsEl) {
     const values = statsEl.querySelectorAll(".stat-value");
-    if (values.length >= 3) {
+    if (values.length >= 4) {
       values[0].textContent = metrics.stats.avgTps;
       values[1].textContent =
         metrics.stats.avgTt100tMs !== null ? `${metrics.stats.avgTt100tMs}ms` : "N/A";
       values[2].textContent = metrics.stats.tpsStdDev;
+      values[3].textContent = `${(metrics.stats.successRate * 100).toFixed(1)}%`;
     }
   }
 
@@ -370,20 +413,45 @@ async function renderComparison() {
   const legend = style.getPropertyValue("--chart-legend").trim();
   const yTitle = style.getPropertyValue("--fg-subtle").trim();
 
-  const datasets = result.series.map((s, i) => {
+  const datasets = [];
+  let anyErrors = false;
+
+  for (const s of result.series) {
     const colorIdx = allConfigs.indexOf(s.config);
-    const color = configColor(colorIdx >= 0 ? colorIdx : i);
-    return {
+    const color = configColor(colorIdx >= 0 ? colorIdx : result.series.indexOf(s));
+
+    const successPoints = s.dataPoints
+      .filter((d) => d.tt100tMs !== null)
+      .map((d) => ({ x: new Date(d.timestamp), y: d.tt100tMs }));
+
+    const errorPoints = s.dataPoints
+      .filter((d) => d.httpStatus < 200 || d.httpStatus >= 300)
+      .map((d) => ({ x: new Date(d.timestamp), y: 0, errorMessage: d.errorMessage, httpStatus: d.httpStatus }));
+
+    if (errorPoints.length > 0) anyErrors = true;
+
+    datasets.push({
       label: s.config,
-      data: s.dataPoints
-        .filter((d) => d.tt100tMs !== null)
-        .map((d) => ({ x: new Date(d.timestamp), y: d.tt100tMs })),
+      data: successPoints,
       borderColor: color,
       backgroundColor: "transparent",
       pointRadius: 2,
       tension: 0.3,
-    };
-  });
+    });
+
+    if (errorPoints.length > 0) {
+      datasets.push({
+        label: `${s.config} errors`,
+        type: "scatter",
+        data: errorPoints,
+        pointStyle: "crossRot",
+        pointRadius: 4,
+        pointBackgroundColor: "#ef4444",
+        pointBorderColor: "#ef4444",
+        showLine: false,
+      });
+    }
+  }
 
   if (comparisonChart) {
     comparisonChart.data.datasets = datasets;
@@ -408,6 +476,41 @@ async function renderComparison() {
               color: legend,
               usePointStyle: true,
               pointStyle: "circle",
+              filter(item) {
+                return !item.text.endsWith(" errors");
+              },
+              generateLabels(chart) {
+                const defaultLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                if (anyErrors) {
+                  defaultLabels.push({
+                    text: "Errors",
+                    fillStyle: "#ef4444",
+                    strokeStyle: "#ef4444",
+                    pointStyle: "crossRot",
+                    hidden: false,
+                    index: defaultLabels.length,
+                  });
+                }
+                return defaultLabels;
+              },
+            },
+          },
+          tooltip: {
+            filter(item) {
+              return item.dataset.label.endsWith(" errors")
+                ? item.raw.httpStatus < 200 || item.raw.httpStatus >= 300
+                : true;
+            },
+            callbacks: {
+              label(ctx) {
+                if (ctx.dataset.label.endsWith(" errors")) {
+                  const raw = ctx.raw;
+                  return raw.errorMessage
+                    ? `Error: ${raw.errorMessage}`
+                    : `HTTP ${raw.httpStatus}`;
+                }
+                return `${ctx.dataset.label}: ${ctx.parsed.y}ms`;
+              },
             },
           },
         },
@@ -466,6 +569,7 @@ function openOverlay(configLabel) {
           `<td>${d.tt100tMs !== null ? `${d.tt100tMs}ms` : "N/A"}</td>` +
           `<td>${d.latencyMs}</td>` +
           `<td>${d.httpStatus}</td>` +
+          `<td>${d.errorMessage || ""}</td>` +
           `</tr>`,
       )
       .join("");

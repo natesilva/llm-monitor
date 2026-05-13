@@ -54,6 +54,7 @@ export interface MetricsDataPoint {
   tps: number;
   latencyMs: number;
   httpStatus: number;
+  errorMessage: string | null;
   ttftMs: number | null;
   tt100tMs: number | null;
 }
@@ -80,6 +81,8 @@ export interface ComparisonDataPoint {
   timestamp: string;
   tps: number;
   tt100tMs: number | null;
+  httpStatus: number;
+  errorMessage: string | null;
 }
 
 export interface ComparisonSeries {

@@ -65,25 +65,27 @@ export function getMetricsForConfig(
 
   const rows = db
     .query(
-      `SELECT timestamp, tps, latency_ms, http_status, ttft_ms, tt100t_ms
+      `SELECT timestamp, tps, latency_ms, http_status, error_message, ttft_ms, tt100t_ms
        FROM benchmark_runs
        WHERE config_label = ? AND timestamp >= ?
        ORDER BY timestamp`,
     )
     .all(configLabel, since) as {
-    timestamp: string;
-    tps: number;
-    latency_ms: number;
-    http_status: number;
-    ttft_ms: number | null;
-    tt100t_ms: number | null;
-  }[];
+      timestamp: string;
+      tps: number;
+      latency_ms: number;
+      http_status: number;
+      error_message: string | null;
+      ttft_ms: number | null;
+      tt100t_ms: number | null;
+    }[];
 
   const dataPoints: MetricsDataPoint[] = rows.map((r) => ({
     timestamp: r.timestamp,
     tps: r.tps,
     latencyMs: r.latency_ms,
     httpStatus: r.http_status,
+    errorMessage: r.error_message,
     ttftMs: r.ttft_ms,
     tt100tMs: r.tt100t_ms,
   }));
@@ -108,40 +110,42 @@ export function getComparisonMetrics(
 ): ComparisonResponse {
   const since = new Date(Date.now() - hours * 3600_000).toISOString();
 
-  let rows: { config_label: string; timestamp: string; tps: number; tt100t_ms: number | null }[];
+  let rows: { config_label: string; timestamp: string; tps: number; tt100t_ms: number | null; http_status: number; error_message: string | null }[];
 
   if (configs && configs.length > 0) {
     const placeholders = configs.map(() => "?").join(",");
     rows = db
       .query(
-        `SELECT config_label, timestamp, tps, tt100t_ms
+        `SELECT config_label, timestamp, tps, tt100t_ms, http_status, error_message
          FROM benchmark_runs
          WHERE timestamp >= ? AND config_label IN (${placeholders})
          ORDER BY config_label, timestamp`,
       )
       .all(since, ...configs) as {
-      config_label: string;
-      timestamp: string;
-      tps: number;
-      tt100t_ms: number | null;
-    }[];
+        config_label: string;
+        timestamp: string;
+        tps: number;
+        tt100t_ms: number | null;
+        http_status: number;
+        error_message: string | null;
+      }[];
   } else {
     rows = db
       .query(
-        `SELECT config_label, timestamp, tps, tt100t_ms
+        `SELECT config_label, timestamp, tps, tt100t_ms, http_status, error_message
          FROM benchmark_runs
          WHERE timestamp >= ?
          ORDER BY config_label, timestamp`,
       )
-      .all(since) as { config_label: string; timestamp: string; tps: number; tt100t_ms: number | null }[];
+      .all(since) as { config_label: string; timestamp: string; tps: number; tt100t_ms: number | null; http_status: number; error_message: string | null }[];
   }
 
-  const grouped = new Map<string, { timestamp: string; tps: number; tt100t_ms: number | null }[]>();
+  const grouped = new Map<string, { timestamp: string; tps: number; tt100t_ms: number | null; http_status: number; error_message: string | null }[]>();
   for (const row of rows) {
     if (!grouped.has(row.config_label)) grouped.set(row.config_label, []);
     grouped
       .get(row.config_label)
-      ?.push({ timestamp: row.timestamp, tps: row.tps, tt100t_ms: row.tt100t_ms });
+      ?.push({ timestamp: row.timestamp, tps: row.tps, tt100t_ms: row.tt100t_ms, http_status: row.http_status, error_message: row.error_message });
   }
 
   const series: ComparisonSeries[] = [];
@@ -152,6 +156,8 @@ export function getComparisonMetrics(
         timestamp: p.timestamp,
         tps: p.tps,
         tt100tMs: p.tt100t_ms,
+        httpStatus: p.http_status,
+        errorMessage: p.error_message,
       })),
     });
   }
@@ -169,26 +175,28 @@ export function getDataPointsForConfig(
 
   const rows = db
     .query(
-      `SELECT timestamp, tps, latency_ms, http_status, ttft_ms, tt100t_ms
+      `SELECT timestamp, tps, latency_ms, http_status, error_message, ttft_ms, tt100t_ms
        FROM benchmark_runs
        WHERE config_label = ? AND timestamp >= ?
        ORDER BY timestamp DESC
        LIMIT ?`,
     )
     .all(configLabel, since, limit) as {
-    timestamp: string;
-    tps: number;
-    latency_ms: number;
-    http_status: number;
-    ttft_ms: number | null;
-    tt100t_ms: number | null;
-  }[];
+      timestamp: string;
+      tps: number;
+      latency_ms: number;
+      http_status: number;
+      error_message: string | null;
+      ttft_ms: number | null;
+      tt100t_ms: number | null;
+    }[];
 
   const dataPoints: MetricsDataPoint[] = rows.map((r) => ({
     timestamp: r.timestamp,
     tps: r.tps,
     latencyMs: r.latency_ms,
     httpStatus: r.http_status,
+    errorMessage: r.error_message,
     ttftMs: r.ttft_ms,
     tt100tMs: r.tt100t_ms,
   }));
